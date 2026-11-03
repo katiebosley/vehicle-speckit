@@ -3,7 +3,7 @@ import Utils from "../config/utils.js";
 import router from "../router.js";
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.DEV ? "http://localhost:3200/api/" : "/api/",
+  baseURL: import.meta.env.DEV ? "http://localhost:3200/vehicle-t2/" : "/vehicle-t2/",
   withCredentials: true,
 });
 

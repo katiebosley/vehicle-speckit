@@ -1,4 +1,4 @@
-# Speckit App
+# OC Vehicle Scheduling
 
 Spec-Driven Development (SDD) starter kit â€” **empty product shell**.
 
@@ -18,7 +18,7 @@ This repository was generated from the Speckit starter kit. Replace this READMEâ
 | Backend | Node.js (ES modules), Express, Sequelize, MySQL |
 | Tests | Jest + supertest (backend), Vitest + `@vue/test-utils` (frontend) |
 
-Default ports: frontend `8082`, backend `3200`. API mount: `/api` (change in `backend/server.js` and `frontend/src/services/services.js`).
+Default ports: frontend `8082`, backend `3200`. API mount: `/vehicle-t2` (change in `backend/server.js` and `frontend/src/services/services.js`).
 
 ---
 

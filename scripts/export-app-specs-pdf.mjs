@@ -233,7 +233,7 @@ function buildCombinedMarkdown() {
   );
 
   return [
-    "# Speckit App — Application Specifications",
+    "# OC Vehicle Scheduling — Application Specifications",
     "",
     "Product specs only: architecture decisions, quality attributes, C4 diagrams, and feature specifications (including UI mockups when linked under `docs/ui/`).",
     "",
