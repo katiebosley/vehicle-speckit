@@ -20,6 +20,8 @@ No application code may be written unless it maps to a requirement in one of the
 | 2 | [feature-2-areas-area-admins-deploy.md](./feature-2-areas-area-admins-deploy.md) | `feature/2-areas-area-admins-deploy` | Feature 1 |
 | 3 | *In progress (teammate) — fleet / vehicle types* | `feature/3-…` | Feature 1 (+ 2 as needed) |
 | 4 | [feature-4-making-and-tracking-requests.md](./feature-4-making-and-tracking-requests.md) | `feature/4-making-and-tracking-requests` | Features 1–3 |
+| 5 | *Expected — review & vehicle assignment* | `feature/5-…` | Features 1–4 |
+| 6 | [feature-6-schedule-calendar-trip-logs-dashboard.md](./feature-6-schedule-calendar-trip-logs-dashboard.md) | `feature/6-schedule-calendar-trip-logs-dashboard` | Features 1–5 |
 
 New features: follow [framework.md](./framework.md#feature-spec-template) — **Status**, **Input**, **FR-00N**, **SC-00N**, **Key Entities**, Gherkin, **Agent implementation request**, **Definition of Done**.
 
