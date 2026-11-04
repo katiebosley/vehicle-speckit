@@ -5,10 +5,10 @@
 **Status:** Draft
 **Created:** 2026-11-04
 **Input:** Requestors submit, validate, list, view, edit, and cancel their own vehicle reservation requests (form + “my requests” list/detail).
-**Depends on:** [Feature 1 — User Authentication](./feature-1-user-authentication.md) (who is asking), [Feature 2 — Areas](./feature-2-areas.md) (areas to pick from), [Feature 3 — Vehicle Types](./feature-3-vehicle-types.md) (vehicle types to ask for)
-**Related:** Hands pending requests with a known `area_id` to Feature 5 (review queue). F5 writes review fields; a later fulfillment feature writes vehicle/driver assignments that this feature only displays.
+**Depends on:** [Feature 1 — Sign-in, Roles & User Management](./feature-1-google-auth-user-management.md) (who is asking), [Feature 2 — Areas, Area Admins & Deployment](./feature-2-areas-area-admins-deploy.md) (areas to pick from), Feature 3 — fleet / vehicle types (in progress; vehicle types to ask for)
+**Related:** Hands pending requests with a known `areaId` to Feature 5 (review queue). F5 writes review fields; a later fulfillment feature writes vehicle/driver assignments that this feature only displays.
 
-> **Workspace note:** As of this draft, Feature 1–3 markdown files may live on other branches or still be finishing. This spec uses the agreed product contracts below; reconcile exact F1–F3 route paths and field names when those specs are on `dev`.
+> **Draft blocker:** Feature 3 is still in progress. Keep Status `Draft` until the F3 filename and vehicle-type list contract are known; then wire the form dropdown endpoint and set `Ready`. Do not invent F3 routes beyond validating `vehicleTypeId` on create/update.
 
 ---
 
@@ -20,7 +20,7 @@
 **So that** the fleet office can receive my reservation need
 
 **Priority:** P1
-**Independent test:** Authenticated requestor `POST`s a valid body and receives `201` with `status: "pending"` and `requester_id` equal to their user id
+**Independent test:** Authenticated requestor `POST`s a valid body and receives `201` with `status: "pending"` and `requesterId` equal to their user id
 **Acceptance scenarios:** see ### US-4.1 under Acceptance Criteria
 
 ### US-4.2: Validation errors on invalid request
@@ -38,7 +38,7 @@
 **So that** I can track where each reservation stands
 
 **Priority:** P1
-**Independent test:** After creating two requests, `GET` list returns only the caller’s rows ordered by `created_at` descending and includes `status`
+**Independent test:** After creating two requests, `GET` list returns only the caller’s rows ordered by `createdAt` descending and includes `status`
 **Acceptance scenarios:** see ### US-4.3 under Acceptance Criteria
 
 ### US-4.4: View request detail
@@ -47,7 +47,7 @@
 **So that** I know the decision and who/what was assigned
 
 **Priority:** P1
-**Independent test:** `GET` own request by id returns full fields; `review_notes` when set; `assignments` array (empty until a later feature writes rows)
+**Independent test:** `GET` own request by id returns full fields; `reviewNotes` when set; `assignments` array (empty until a later feature writes rows)
 **Acceptance scenarios:** see ### US-4.4 under Acceptance Criteria
 
 ### US-4.5: Edit a pending request
@@ -65,7 +65,7 @@
 **So that** I can free the reservation when plans change
 
 **Priority:** P1
-**Independent test:** Cancel own pending → `cancelled`; cancel own approved with future `departure_at` → `cancelled`; cancel approved with past `departure_at` → `400`
+**Independent test:** Cancel own pending → `cancelled`; cancel own approved with future `departureAt` → `cancelled`; cancel approved with past `departureAt` → `400`
 **Acceptance scenarios:** see ### US-4.6 under Acceptance Criteria
 
 ### US-4.7: Isolation of others’ requests
@@ -83,47 +83,51 @@
 
 ### Functional Requirements
 
-- **FR-001**: System MUST require authentication (`Authorization: Bearer <token>`) for all request endpoints in this feature.
-- **FR-002**: System MUST set `requester_id` from `req.user.id` on create — MUST NOT accept `requester_id` from the client body.
-- **FR-003**: Users MUST be able to create a request with: `area_id`, `purpose`, `destination`, `departure_at`, `return_at`, `passenger_count`, `vehicle_type_id`, and `vehicles_needed` (default `1` when omitted).
-- **FR-004**: On successful create, system MUST persist `status = "pending"` and leave `reviewed_by`, `reviewed_at`, and `review_notes` null.
+- **FR-001**: All request endpoints in this feature MUST require `authenticate` then `requireRole("requestor")` from Feature 1. Unauthenticated → `401`. Authenticated but not `requestor` → `403` with `{ "message": "You do not have permission for this action." }`.
+- **FR-002**: System MUST set `requesterId` from `req.user.id` on create — MUST NOT accept `requesterId` from the client body.
+- **FR-003**: Requestors MUST be able to create a request with: `areaId`, `purpose`, `destination`, `departureAt`, `returnAt`, `passengerCount`, `vehicleTypeId`, and `vehiclesNeeded` (default `1` when omitted).
+- **FR-004**: On successful create, system MUST persist `status = "pending"` and leave `reviewedBy`, `reviewedAt`, and `reviewNotes` null.
 - **FR-005**: System MUST reject create/update with `400` and message `"All required fields must be provided."` when any required field is missing or empty (after trim for strings).
-- **FR-006**: System MUST reject create/update with `400` and message `"Return must be after departure."` when `return_at` is less than or equal to `departure_at`.
-- **FR-007**: System MUST reject create/update with `400` and message `"Departure must be in the future."` when `departure_at` is not strictly after the server’s current time.
-- **FR-008**: System MUST reject create/update with `400` when `passenger_count` or `vehicles_needed` is not an integer ≥ 1.
-- **FR-009**: System MUST reject create/update when `area_id` does not reference an active area from Feature 2, or `vehicle_type_id` does not reference a usable vehicle type from Feature 3 (`400` with message `"Invalid area or vehicle type."`).
-- **FR-010**: System MUST return the authenticated requestor’s requests only on list, ordered by `created_at` descending (newest first), including `status` and summary fields needed by the list screen.
-- **FR-011**: System MUST return full detail for an owned request, including nullable review fields (`reviewed_by`, `reviewed_at`, `review_notes`) and an `assignments` array of `{ vehicle, driver }` summaries when assignment rows exist; otherwise `assignments: []`.
-- **FR-012**: System MUST allow update of an owned request only while `status = "pending"`. Updates MUST apply the same validation rules as create. Updates MUST NOT modify review fields or `requester_id`.
-- **FR-013**: System MUST allow cancel of an owned request when `status` is `"pending"`, or when `status` is `"approved"` and `departure_at` is strictly in the future. Cancel MUST set `status = "cancelled"`.
-- **FR-014**: System MUST reject cancel with `400` and message `"This request cannot be cancelled."` when the request is not cancellable under FR-013 (including approved with `departure_at` ≤ now, or status `denied` / `cancelled` / `completed`).
-- **FR-015**: System MUST respond with `404` and `{ "message": "Request not found." }` for get/update/cancel when the id does not exist **or** is not owned by `req.user.id` (MUST NOT use `403`).
-- **FR-016**: This feature MUST NOT write `reviewed_by`, `reviewed_at`, or `review_notes` (Feature 5 owns those writes). This feature MUST NOT create or edit vehicle assignments or trip logs.
+- **FR-006**: System MUST reject create/update with `400` and message `"Return must be after departure."` when `returnAt` is less than or equal to `departureAt`.
+- **FR-007**: System MUST reject create/update with `400` and message `"Departure must be in the future."` when `departureAt` is not strictly after the server’s current time.
+- **FR-008**: System MUST reject create/update with `400` and message `"Passenger count and vehicles needed must be at least 1."` when `passengerCount` or `vehiclesNeeded` is not an integer ≥ 1.
+- **FR-009**: System MUST reject create/update when `areaId` does not reference an **active** area (Feature 2), or `vehicleTypeId` does not reference a usable vehicle type (Feature 3) — `400` with message `"Invalid area or vehicle type."`.
+- **FR-010**: System MUST return the authenticated requestor’s requests only on list, ordered by `createdAt` descending (newest first), including `status` and summary fields needed by the list screen.
+- **FR-011**: System MUST return full detail for an owned request, including nullable review fields (`reviewedBy`, `reviewedAt`, `reviewNotes`) and an `assignments` array of `{ vehicle, driver }` summaries when assignment rows exist; otherwise `assignments: []`.
+- **FR-012**: System MUST allow update of an owned request only while `status = "pending"`. Updates MUST apply the same validation rules as create. Updates MUST NOT modify review fields or `requesterId`.
+- **FR-013**: System MUST allow cancel of an owned request when `status` is `"pending"`, or when `status` is `"approved"` and `departureAt` is strictly in the future. Cancel MUST set `status = "cancelled"`.
+- **FR-014**: System MUST reject cancel with `400` and message `"This request cannot be cancelled."` when the request is not cancellable under FR-013 (including approved with `departureAt` ≤ now, or status `denied` / `cancelled` / `completed`).
+- **FR-015**: System MUST respond with `404` and `{ "message": "Request not found." }` for get/update/cancel when the id does not exist **or** is not owned by `req.user.id` (MUST NOT use `403` for ownership — distinct from Feature 2 area-admin `403`).
+- **FR-016**: This feature MUST NOT write `reviewedBy`, `reviewedAt`, or `reviewNotes` (Feature 5 owns those writes). This feature MUST NOT create or edit vehicle assignments or trip logs.
 - **FR-017**: UI MUST show only data returned for the signed-in requestor (list and detail from this feature’s APIs).
+- **FR-018**: `MenuBar` MUST add **My Requests** for role `requestor` (path `/my-requests`). This feature MUST NOT create a second `MenuBar` (extend Feature 1’s shell like Feature 2 does for **Areas** / **My Areas**).
 
 ---
 
 ## Assumptions
 
-- Feature 1 is on `dev`: authenticated session/Bearer token; users have roles including `requestor`; `req.user.id` identifies the requester.
-- Feature 2 is on `dev`: areas exist with stable `id` / `name` (and an active flag if F2 defines one); the request form can load areas for a dropdown.
-- Feature 3 will provide vehicle types with stable `id` / `name` for the form dropdown before Feature 4 is implemented/merged. Exact F3 list route follows the Feature 3 spec when Ready.
+- Feature 1 provides Google sign-in, Bearer sessions, `authenticate`, `requireRole`, roles including `requestor`, and the shared `MenuBar`.
+- Feature 2 provides areas; requestors load the form dropdown via `GET /vehicle/areas` (active areas only). Create/update requires an **active** `areaId`.
+- Feature 3 (in progress) will provide a `vehicle_types` table (or equivalent) and an authenticated way to list types for the form. Exact list route and “usable type” rules follow the Feature 3 spec when Ready. Until then, create/update still validates that `vehicleTypeId` exists/is usable per FR-009.
+- API JSON uses **camelCase** (Feature 1 FR-017 pattern). Sequelize models use `underscored: true` so JS attributes are camelCase and columns match the ERD’s snake_case names.
+- API mount is `/vehicle/…` (same as Features 1 and 2).
 - Review fields exist on `requests` for display but are written only by Feature 5.
-- `assignments` on detail may stay empty until a later fulfillment feature persists `vehicle_assignments` (and related vehicle/driver data). Feature 4 still defines the response shape.
-- “Hasn’t started yet” for cancel means: approved and `departure_at` is still in the future (no trip-log dependency in this feature).
-- API mount prefix is `/vehicle-t2`.
+- `assignments` on detail may stay empty until a later fulfillment feature persists assignment rows. Feature 4 still defines the response shape.
+- “Hasn’t started yet” for cancel means: approved and `departureAt` is still in the future (no trip-log dependency in this feature).
+- Admins and area admins use Feature 5 for review queues — not this requestor UI.
 
 ## Edge Cases
 
 - Missing/blank required field → `400` `"All required fields must be provided."`
-- `return_at` ≤ `departure_at` → `400` `"Return must be after departure."`
-- `departure_at` in the past or equal to now → `400` `"Departure must be in the future."`
-- `passenger_count` or `vehicles_needed` < 1 → `400` (same required/invalid handling; message `"Passenger count and vehicles needed must be at least 1."`)
-- Unknown/inactive area or vehicle type → `400` `"Invalid area or vehicle type."`
+- `returnAt` ≤ `departureAt` → `400` `"Return must be after departure."`
+- `departureAt` in the past or equal to now → `400` `"Departure must be in the future."`
+- `passengerCount` or `vehiclesNeeded` < 1 → `400` `"Passenger count and vehicles needed must be at least 1."`
+- Unknown or inactive area, or unknown/unusable vehicle type → `400` `"Invalid area or vehicle type."`
 - Edit when status is not `pending` → `400` `"Only pending requests can be edited."`
 - Cancel when not allowed → `400` `"This request cannot be cancelled."`
 - Another user’s request id → `404` `"Request not found."`
 - Unauthenticated → `401`
+- Authenticated non-`requestor` → `403` `"You do not have permission for this action."`
 - Empty my-requests list → empty array / empty-state copy (see Screen Requirements)
 
 ## Success Criteria
@@ -141,9 +145,10 @@ Each requestor owns their request rows exclusively for create, read, update, and
 
 | Rule | Requirement |
 |------|-------------|
-| **Read scope** | List/detail only where `requester_id = req.user.id` |
-| **Write scope** | Update/cancel only when row matches `id` and `requester_id = req.user.id` |
-| **Create scope** | New rows owned by the authenticated user (`requester_id` from `req.user.id`) |
+| **Read scope** | List/detail only where `requesterId = req.user.id` |
+| **Write scope** | Update/cancel only when row matches `id` and `requesterId = req.user.id` |
+| **Create scope** | New rows owned by the authenticated requestor (`requesterId` from `req.user.id`) |
+| **Role gate** | Endpoints require `requestor`; other roles → `403` (not ownership `404`) |
 | **Cross-user access** | Other user’s request → `404` (not `403`) |
 | **UI scope** | UI shows only data returned for the signed-in user |
 | **Implementation** | Shared helper in `app/authorization/` (e.g. `getOwnedRequestOrNull`) — do not duplicate ownership checks in every controller |
@@ -154,7 +159,7 @@ Each requestor owns their request rows exclusively for create, read, update, and
 
 - **Request**: A vehicle reservation ask; belongs to one User (requester), one Area, one VehicleType; has a lifecycle `status`; may later gain review metadata (F5) and assignments (later feature).
 - **User** (Feature 1): Authenticated account; requestor creates and tracks own requests.
-- **Area** (Feature 2): Fleet/office grouping the request is sent to.
+- **Area** (Feature 2): Fleet/office grouping the request is sent to; must be active when creating/updating.
 - **VehicleType** (Feature 3): Category requested (e.g. Van, Car, Bus).
 - **Assignment** (later feature, read-only here): Optional link of a specific vehicle and driver to an approved request; shown on detail when present.
 
@@ -162,28 +167,28 @@ Each requestor owns their request rows exclusively for create, read, update, and
 
 ## API Requirements
 
-All endpoints Auth: **Yes**. Mount: `/vehicle-t2`. Flat JSON; errors `{ "message": "..." }`.
+All endpoints: Auth **Yes** + role **`requestor`**. Mount: `/vehicle`. Flat JSON; errors `{ "message": "..." }`.
 
 | Method | Endpoint | Auth | Purpose |
 |--------|----------|------|---------|
-| `POST` | `/vehicle-t2/requests` | Yes | Create request (`pending`) |
-| `GET` | `/vehicle-t2/requests` | Yes | List my requests, newest first |
-| `GET` | `/vehicle-t2/requests/:id` | Yes | My request detail (+ review fields + `assignments`) |
-| `PUT` | `/vehicle-t2/requests/:id` | Yes | Edit pending request |
-| `POST` | `/vehicle-t2/requests/:id/cancel` | Yes | Cancel when allowed |
+| `POST` | `/vehicle/requests` | Yes, requestor | Create request (`pending`) |
+| `GET` | `/vehicle/requests` | Yes, requestor | List my requests, newest first |
+| `GET` | `/vehicle/requests/:id` | Yes, requestor | My request detail (+ review fields + `assignments`) |
+| `PUT` | `/vehicle/requests/:id` | Yes, requestor | Edit pending request |
+| `POST` | `/vehicle/requests/:id/cancel` | Yes, requestor | Cancel when allowed |
 
 **Create / update request body:**
 
 ```json
 {
-  "area_id": 1,
+  "areaId": 1,
   "purpose": "Field trip to museum",
   "destination": "Downtown Museum",
-  "departure_at": "2026-12-01T09:00:00.000Z",
-  "return_at": "2026-12-01T15:00:00.000Z",
-  "passenger_count": 12,
-  "vehicle_type_id": 2,
-  "vehicles_needed": 1
+  "departureAt": "2026-12-01T09:00:00.000Z",
+  "returnAt": "2026-12-01T15:00:00.000Z",
+  "passengerCount": 12,
+  "vehicleTypeId": 2,
+  "vehiclesNeeded": 1
 }
 ```
 
@@ -192,25 +197,25 @@ All endpoints Auth: **Yes**. Mount: `/vehicle-t2`. Flat JSON; errors `{ "message
 ```json
 {
   "id": 10,
-  "requester_id": 42,
-  "area_id": 1,
-  "vehicle_type_id": 2,
-  "vehicles_needed": 1,
-  "passenger_count": 12,
+  "requesterId": 42,
+  "areaId": 1,
+  "vehicleTypeId": 2,
+  "vehiclesNeeded": 1,
+  "passengerCount": 12,
   "purpose": "Field trip to museum",
   "destination": "Downtown Museum",
-  "departure_at": "2026-12-01T09:00:00.000Z",
-  "return_at": "2026-12-01T15:00:00.000Z",
+  "departureAt": "2026-12-01T09:00:00.000Z",
+  "returnAt": "2026-12-01T15:00:00.000Z",
   "status": "pending",
-  "reviewed_by": null,
-  "reviewed_at": null,
-  "review_notes": null,
-  "created_at": "2026-11-04T15:00:00.000Z",
-  "updated_at": "2026-11-04T15:00:00.000Z"
+  "reviewedBy": null,
+  "reviewedAt": null,
+  "reviewNotes": null,
+  "createdAt": "2026-11-04T15:00:00.000Z",
+  "updatedAt": "2026-11-04T15:00:00.000Z"
 }
 ```
 
-**List success** (`200`): array of owned requests (same core fields as create; list may omit `review_notes` / `assignments` — detail is authoritative for those). Sorted by `created_at` descending.
+**List success** (`200`): array of owned requests (same core fields as create; list may omit `reviewNotes` / `assignments` — detail is authoritative for those). Sorted by `createdAt` descending.
 
 **Detail success** (`200`): create-shaped fields plus:
 
@@ -219,8 +224,8 @@ All endpoints Auth: **Yes**. Mount: `/vehicle-t2`. Flat JSON; errors `{ "message
   "assignments": [
     {
       "id": 1,
-      "vehicle": { "id": 5, "name": "Van 2", "license_plate": "ABC-123" },
-      "driver": { "id": 7, "first_name": "Alex", "last_name": "Nguyen" }
+      "vehicle": { "id": 5, "name": "Van 2", "licensePlate": "ABC-123" },
+      "driver": { "id": 7, "firstName": "Alex", "lastName": "Nguyen" }
     }
   ]
 }
@@ -232,20 +237,25 @@ When none exist: `"assignments": []`.
 
 **Error responses:** `{ "message": "Human-readable explanation." }` with messages quoted in FRs / Gherkin.  
 **Not found / not owned:** `404` `{ "message": "Request not found." }`.  
-**Unauthenticated:** `401`.
+**Unauthenticated:** `401`.  
+**Wrong role:** `403` `{ "message": "You do not have permission for this action." }`.
 
-Area and vehicle-type **list** endpoints remain owned by Features 2 and 3; this feature’s UI consumes them for dropdowns only.
+**Dropdown data (owned elsewhere):**
+
+- Areas: `GET /vehicle/areas` (Feature 2 — requestor receives active areas only).
+- Vehicle types: Feature 3 list endpoint (TBD when F3 is Ready).
 
 ---
 
 ## Screen Requirements
 
-### [View: My Requests] — route name `my-requests`
+### [View: My Requests] — route name `my-requests` — path `/my-requests`
 
 *   Heading: **My Requests**
 *   Purpose: show the signed-in requestor’s reservations
+*   Router: allow role `requestor` only (Feature 1 FR-010 pattern)
 *   Primary action: **New Request** (`oc-cta`) → navigate to `request-new`
-*   List columns/fields: purpose (or destination), area name if available, departure, status, created/relative order newest first
+*   List columns/fields: purpose (or destination), area name if available, departure, status, newest first
 *   Row opens `request-detail`
 *   **Empty state:** `"No requests yet. Create your first request."`
 *   **Loading:** progress/skeleton while fetching
@@ -254,7 +264,7 @@ Area and vehicle-type **list** endpoints remain owned by Features 2 and 3; this 
 ### [View: New Request] — route name `request-new`
 
 *   Heading: **New Request**
-*   Fields: Area (select from F2), Purpose, Destination, Departure date/time, Return date/time, Passenger count, Vehicle type (select from F3), Vehicles needed (default 1)
+*   Fields: Area (select from `GET /vehicle/areas`), Purpose, Destination, Departure date/time, Return date/time, Passenger count, Vehicle type (select from Feature 3 list when available), Vehicles needed (default 1)
 *   Primary action: **Submit Request** (`oc-cta`)
 *   Secondary: **Cancel** → back to `my-requests` without saving
 *   Client-side checks may mirror FR-005–FR-008; server remains source of truth
@@ -269,12 +279,12 @@ Area and vehicle-type **list** endpoints remain owned by Features 2 and 3; this 
 ### [View: Request Detail] — route name `request-detail`
 
 *   Shows all request fields and `status`
-*   **Review:** show `review_notes` (and reviewer/time if present); if none, `"No review notes yet."`
+*   **Review:** show `reviewNotes` (and reviewer/time if present); if none, `"No review notes yet."`
 *   **Assignments:** if `assignments.length > 0`, list vehicle name/plate and driver name; else `"No vehicles assigned yet."`
 *   Actions: **Edit** (only if `pending`), **Cancel request** (only if cancellable per FR-013) with confirm dialog
 *   Cancel confirm: title/body make clear the request will be cancelled; confirm button **Cancel Request**
 
-**App chrome:** authenticated shell from Feature 1; add nav entry **My Requests** when this feature ships (exact MenuBar pattern follows existing app chrome).
+**App chrome (MenuBar):** add **My Requests** for `requestor` (path `/my-requests`). Do not create a second `MenuBar`.
 
 ---
 
@@ -282,24 +292,26 @@ Area and vehicle-type **list** endpoints remain owned by Features 2 and 3; this 
 
 ### `requests` table (new — owned by this feature)
 
+DB columns are snake_case; API/JSON uses camelCase via Sequelize `underscored: true`.
+
 | Field | Type | Rules |
 |-------|------|-------|
 | `id` | INTEGER PK | Auto-increment |
-| `requester_id` | INTEGER FK | Required; references `users.id`; set from auth |
-| `area_id` | INTEGER FK | Required; references `areas.id` |
-| `vehicle_type_id` | INTEGER FK | Required; references `vehicle_types.id` |
-| `vehicles_needed` | INTEGER | Required; default `1`; ≥ 1 |
-| `passenger_count` | INTEGER | Required; ≥ 1 |
+| `requester_id` | INTEGER FK | Required; references `users.id`; set from auth (`requesterId` in JSON) |
+| `area_id` | INTEGER FK | Required; references `areas.id` (`areaId` in JSON); must be active on create/update |
+| `vehicle_type_id` | INTEGER FK | Required; references `vehicle_types.id` (`vehicleTypeId` in JSON); Feature 3 |
+| `vehicles_needed` | INTEGER | Required; default `1`; ≥ 1 (`vehiclesNeeded`) |
+| `passenger_count` | INTEGER | Required; ≥ 1 (`passengerCount`) |
 | `purpose` | STRING(255) | Required; non-empty after trim |
 | `destination` | STRING(255) | Required; non-empty after trim |
-| `departure_at` | DATETIME | Required; must be in the future on create/update |
-| `return_at` | DATETIME | Required; must be after `departure_at` |
+| `departure_at` | DATETIME | Required; must be in the future on create/update (`departureAt`) |
+| `return_at` | DATETIME | Required; must be after `departure_at` (`returnAt`) |
 | `status` | ENUM | `pending`, `approved`, `denied`, `cancelled`, `completed`; default `pending` |
-| `reviewed_by` | INTEGER FK NULL | References `users.id`; **written by Feature 5 only** |
-| `reviewed_at` | DATETIME NULL | **Written by Feature 5 only** |
-| `review_notes` | TEXT NULL | **Written by Feature 5 only** |
-| `created_at` | DATETIME | Required |
-| `updated_at` | DATETIME | Required |
+| `reviewed_by` | INTEGER FK NULL | References `users.id`; **written by Feature 5 only** (`reviewedBy`) |
+| `reviewed_at` | DATETIME NULL | **Written by Feature 5 only** (`reviewedAt`) |
+| `review_notes` | TEXT NULL | **Written by Feature 5 only** (`reviewNotes`) |
+| `created_at` | DATETIME | Required (`createdAt`) |
+| `updated_at` | DATETIME | Required (`updatedAt`) |
 
 ### Associations
 
@@ -314,6 +326,7 @@ Area and vehicle-type **list** endpoints remain owned by Features 2 and 3; this 
 
 ### Not created by this feature
 
+- `vehicle_types` — Feature 3
 - `vehicle_assignments`, `vehicles`, `trip_logs`, `vehicle_unavailability` — later features
 - Writing `approved` / `denied` / `completed` status transitions — Feature 5+ (except this feature sets `cancelled`)
 
@@ -327,13 +340,18 @@ Area and vehicle-type **list** endpoints remain owned by Features 2 and 3; this 
 *   **Given** I am signed in as a requestor
 *   **And** an active area and a vehicle type exist
 *   **When** I submit a request with area, purpose, destination, future departure and later return, passenger count, vehicle type, and vehicles needed
-*   **Then** the API returns `201` with `status` `"pending"` and `requester_id` equal to my user id
-*   **And** `reviewed_by`, `reviewed_at`, and `review_notes` are null
+*   **Then** the API returns `201` with `status` `"pending"` and `requesterId` equal to my user id
+*   **And** `reviewedBy`, `reviewedAt`, and `reviewNotes` are null
 
 #### Scenario: Unauthenticated user cannot create a request
 *   **Given** I am not signed in
-*   **When** I send `POST /vehicle-t2/requests`
+*   **When** I send `POST /vehicle/requests`
 *   **Then** the API returns `401`
+
+#### Scenario: Non-requestor cannot create a request
+*   **Given** I am signed in as an admin
+*   **When** I send `POST /vehicle/requests` with a valid body
+*   **Then** the API returns `403` with `{ "message": "You do not have permission for this action." }`
 
 ### US-4.2 — Validation errors on invalid request
 
@@ -345,17 +363,17 @@ Area and vehicle-type **list** endpoints remain owned by Features 2 and 3; this 
 
 #### Scenario: Return is not after departure
 *   **Given** I am signed in as a requestor
-*   **When** I submit a request where `return_at` is before or equal to `departure_at`
+*   **When** I submit a request where `returnAt` is before or equal to `departureAt`
 *   **Then** the API returns `400` with `{ "message": "Return must be after departure." }`
 
 #### Scenario: Departure is in the past
 *   **Given** I am signed in as a requestor
-*   **When** I submit a request with `departure_at` in the past
+*   **When** I submit a request with `departureAt` in the past
 *   **Then** the API returns `400` with `{ "message": "Departure must be in the future." }`
 
 #### Scenario: Invalid area or vehicle type
 *   **Given** I am signed in as a requestor
-*   **When** I submit a request with an unknown `area_id` or `vehicle_type_id`
+*   **When** I submit a request with an unknown or inactive `areaId`, or an unknown `vehicleTypeId`
 *   **Then** the API returns `400` with `{ "message": "Invalid area or vehicle type." }`
 
 ### US-4.3 — List my requests
@@ -363,9 +381,9 @@ Area and vehicle-type **list** endpoints remain owned by Features 2 and 3; this 
 #### Scenario: Requestor sees own requests newest first
 *   **Given** I am signed in as a requestor
 *   **And** I have two requests created at different times
-*   **When** I open **My Requests** (or `GET /vehicle-t2/requests`)
+*   **When** I open **My Requests** (or `GET /vehicle/requests`)
 *   **Then** I see only my requests
-*   **And** they are ordered newest first
+*   **And** they are ordered newest first by `createdAt`
 *   **And** each row includes a `status` of pending, approved, denied, cancelled, or completed
 
 #### Scenario: Empty my requests list
@@ -386,7 +404,7 @@ Area and vehicle-type **list** endpoints remain owned by Features 2 and 3; this 
 
 #### Scenario: Requestor views review notes and assignments when present
 *   **Given** I am signed in as a requestor
-*   **And** I own an approved request that has `review_notes` and at least one assignment (seeded as if written by later features)
+*   **And** I own an approved request that has `reviewNotes` and at least one assignment (seeded as if written by later features)
 *   **When** I open that request’s detail
 *   **Then** I see the reviewer’s notes
 *   **And** I see the assigned vehicle and driver information from `assignments`
@@ -417,13 +435,13 @@ Area and vehicle-type **list** endpoints remain owned by Features 2 and 3; this 
 
 #### Scenario: Requestor cancels an approved request that has not started
 *   **Given** I am signed in as a requestor
-*   **And** I own a request with status `"approved"` and `departure_at` in the future
+*   **And** I own a request with status `"approved"` and `departureAt` in the future
 *   **When** I cancel the request
 *   **Then** the API returns `200` with `status` `"cancelled"`
 
 #### Scenario: Requestor cannot cancel an approved request after departure time
 *   **Given** I am signed in as a requestor
-*   **And** I own a request with status `"approved"` and `departure_at` in the past
+*   **And** I own a request with status `"approved"` and `departureAt` in the past
 *   **When** I cancel the request
 *   **Then** the API returns `400` with `{ "message": "This request cannot be cancelled." }`
 
@@ -432,19 +450,19 @@ Area and vehicle-type **list** endpoints remain owned by Features 2 and 3; this 
 #### Scenario: Requestor cannot list another user’s requests
 *   **Given** requestor A and requestor B both have requests
 *   **And** I am signed in as requestor A
-*   **When** I `GET /vehicle-t2/requests`
+*   **When** I `GET /vehicle/requests`
 *   **Then** the response includes only requestor A’s requests
 
 #### Scenario: Requestor cannot open another user’s request by id
 *   **Given** requestor B owns request id `99`
 *   **And** I am signed in as requestor A
-*   **When** I `GET /vehicle-t2/requests/99`
+*   **When** I `GET /vehicle/requests/99`
 *   **Then** the API returns `404` with `{ "message": "Request not found." }`
 
 #### Scenario: Requestor cannot update or cancel another user’s request
 *   **Given** requestor B owns request id `99`
 *   **And** I am signed in as requestor A
-*   **When** I `PUT /vehicle-t2/requests/99` or `POST /vehicle-t2/requests/99/cancel`
+*   **When** I `PUT /vehicle/requests/99` or `POST /vehicle/requests/99/cancel`
 *   **Then** the API returns `404` with `{ "message": "Request not found." }`
 
 ---
@@ -457,6 +475,7 @@ Each scenario above must map to at least one automated test.
 |-------|----------|-----------|-----------|
 | US-4.1 | Requestor submits a valid request | `backend/tests/requests.test.js` | `Requestor submits a valid request` |
 | US-4.1 | Unauthenticated user cannot create a request | `backend/tests/requests.test.js` | `Unauthenticated user cannot create a request` |
+| US-4.1 | Non-requestor cannot create a request | `backend/tests/requests.test.js` | `Non-requestor cannot create a request` |
 | US-4.2 | Requestor omits a required field | `backend/tests/requests.test.js` | `Requestor omits a required field` |
 | US-4.2 | Return is not after departure | `backend/tests/requests.test.js` | `Return is not after departure` |
 | US-4.2 | Departure is in the past | `backend/tests/requests.test.js` | `Departure is in the past` |
@@ -490,6 +509,7 @@ If API routes, payloads, schema, or product rules changed per this spec, update 
 Complete Definition of Done and the merge checklist in @features/framework.md.
 Do not implement behavior not in this spec.
 Do not implement Feature 5 review writes or assignment/trip-log creation.
+Wait for Feature 3 vehicle-type list contract before wiring the vehicle-type dropdown; validate vehicleTypeId per FR-009.
 ```
 
 **Reference updates for this feature:** `features/reference/api.md`, `features/reference/data-model.md`, `features/reference/behavior.md`
@@ -498,21 +518,22 @@ Do not implement Feature 5 review writes or assignment/trip-log creation.
 
 ## Definition of Done
 
-*   [ ] Backend and frontend implemented per this spec (**FR-001**–**FR-017** satisfied)
+*   [ ] Backend and frontend implemented per this spec (**FR-001**–**FR-018** satisfied)
 *   [ ] **Success Criteria (SC-001**–**SC-004)** met
 *   [ ] All mapped tests pass (`npm test`)
 *   [ ] Test Coverage Map complete
 *   [ ] `features/reference/data-model.md` updated (schema)
 *   [ ] `features/reference/api.md` updated (routes/payloads)
 *   [ ] `features/reference/behavior.md` updated (ownership, validation, cancel rules)
-*   [ ] Feature 1–3 contracts used for auth, areas, and vehicle types match what is on `dev` (reconcile paths/names if those specs renamed fields)
+*   [ ] Feature 3 vehicle-type list contract reconciled into this spec (dropdown endpoint + Status `Ready`) before or with implementation
 
 ---
 
 ## Out of Scope
 
-*   Admin / area_admin review queue and writing `reviewed_by` / `reviewed_at` / `review_notes` / approve / deny (Feature 5)
+*   Admin / area_admin review queue and writing `reviewedBy` / `reviewedAt` / `reviewNotes` / approve / deny (Feature 5)
 *   Creating or editing `vehicle_assignments`, `trip_logs`, or vehicle inventory
+*   Defining Feature 3 vehicle-type APIs (teammate; this feature only depends on them)
 *   Setting status to `approved`, `denied`, or `completed` (except displaying those values when set elsewhere)
 *   Requestor browsing or managing other users’ requests
 *   Notifications / email on status change

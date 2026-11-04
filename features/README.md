@@ -16,9 +16,9 @@ No application code may be written unless it maps to a requirement in one of the
 
 | ID | File | Branch | Depends on |
 |----|------|--------|------------|
-| 1 | *Expected:* `feature-1-user-authentication.md` (finished elsewhere / bring onto `dev`) | `feature/1-user-authentication` | — |
-| 2 | *Expected:* `feature-2-areas.md` (finished elsewhere / bring onto `dev`) | `feature/2-areas` | Feature 1 |
-| 3 | *Expected:* `feature-3-vehicle-types.md` (in progress) | `feature/3-vehicle-types` | Feature 1 |
+| 1 | [feature-1-google-auth-user-management.md](./feature-1-google-auth-user-management.md) | `feature/1-google-auth-user-management` | — |
+| 2 | [feature-2-areas-area-admins-deploy.md](./feature-2-areas-area-admins-deploy.md) | `feature/2-areas-area-admins-deploy` | Feature 1 |
+| 3 | *In progress (teammate) — fleet / vehicle types* | `feature/3-…` | Feature 1 (+ 2 as needed) |
 | 4 | [feature-4-making-and-tracking-requests.md](./feature-4-making-and-tracking-requests.md) | `feature/4-making-and-tracking-requests` | Features 1–3 |
 
 New features: follow [framework.md](./framework.md#feature-spec-template) — **Status**, **Input**, **FR-00N**, **SC-00N**, **Key Entities**, Gherkin, **Agent implementation request**, **Definition of Done**.
