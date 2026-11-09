@@ -84,4 +84,4 @@ What we chose, in one or two sentences.
 
 | ADR | Title | Status |
 |-----|-------|--------|
-| — | *Add ADR-0001 when you make the first cross-cutting architecture choice* | — |
+| [ADR-0002](0002-security-architecture.md) | Security architecture — Google sign-in with server-side sessions | Accepted |

@@ -1,11 +1,11 @@
 # Feature: Sign-in, Roles & User Management
 
 **Feature ID:** 1
-**Branch pattern:** `feature/1-google-auth-user-management`
+**Branch pattern:** `feature-1-google-auth-user-management`
 **Status:** Draft
 **Created:** 2026-11-02
 **Input:** OC faculty, staff, and teams sign in to the vehicle scheduling app with their OC Google account. Every user has one role (admin, area admin, requestor) that controls which menus, pages, and API calls they can use. Admins manage users: search them, change roles, deactivate accounts, and mark approved drivers with a license expiration date. Every user can edit their own name and phone.
-**Related:** [ADR-0001 — Client–server multi-user architecture](../docs/adr/0001-client-server-multi-user-architecture.md), [ADR-0002 — Security architecture](../docs/adr/0002-security-architecture.md)
+
 
 ---
 
@@ -99,7 +99,7 @@
 
 - **FR-001**: Users MUST sign in only with Google Identity Services. The frontend obtains a Google ID token (`credential`) and sends it to `POST /vehicle/login`. There MUST be no username/password login and no register screen or endpoint.
 - **FR-002**: The backend MUST verify the ID token with `google-auth-library` (`OAuth2Client.verifyIdToken`) using the `GOOGLE_CLIENT_ID` environment variable as the audience. A missing, malformed, expired, or wrong-audience token MUST return `401` with `{ "message": "Google sign-in failed." }`.
-- **FR-003**: Only OC Google accounts MAY sign in. A verified token whose email domain is not an allowed OC domain MUST return `403` with `{ "message": "Sign in with your OC Google account." }` and MUST NOT create a user. [NEEDS CLARIFICATION: allowed domains — `oc.edu` only, or also `eagles.oc.edu` for student team members?]
+- **FR-003**: Only OC Google accounts MAY sign in. A verified token whose email domain is not an allowed OC domain MUST return `403` with `{ "message": "Sign in with your OC Google account." }` and MUST NOT create a user.
 - **FR-004**: On a verified sign-in the backend MUST find the user by `google_id`. If none matches, it MUST find the user by `email` (case-insensitive) and store the Google `sub` in `google_id` (links seeded users). If neither matches, it MUST create a user with `role` `requestor`, `is_approved_driver` `false`, `is_active` `true`, and `first_name` / `last_name` from the token's `given_name` / `family_name`. An existing user's `role` MUST NOT change on sign-in.
 - **FR-005**: Sessions MUST use the **JWT + Session table** pattern: token stored server-side; client sends `Authorization: Bearer <token>`. Session lifetime MUST be **24 hours**. Login MUST reuse a non-expired session for the same user when one exists.
 - **FR-006**: A user with `is_active` `false` MUST receive `403` with `{ "message": "Your account has been deactivated." }` on `POST /vehicle/login`. `authenticate` MUST reject the session of an inactive user with `401`.
@@ -301,6 +301,8 @@ Each user owns their own profile. Only admins can see or change other users. Lat
 ---
 
 ## Data Model Requirements
+
+Team ERD (target model for all features): [`docs/erd/vehicle-scheduling-erd.png`](../docs/erd/vehicle-scheduling-erd.png). Shipped schema: [`features/reference/data-model.md`](reference/data-model.md).
 
 ### `users` table
 
@@ -676,8 +678,8 @@ Each scenario above must map to at least one automated test.
 | US-1.1 | User signs in with an invalid Google credential          | `backend/tests/auth.test.js`, `frontend/tests/Login.test.js`          | `User signs in with an invalid Google credential`          |
 | US-1.1 | Deactivated user cannot sign in                          | `backend/tests/auth.test.js`                                          | `Deactivated user cannot sign in`                          |
 | US-1.1 | Signed-in user visits login page                         | `frontend/tests/router.test.js`                                       | `Signed-in user visits login page`                         |
-| US-1.1 | API request includes session token                       | `backend/tests/authenticate.test.js`                                  | `API request includes session token`                       |
-| US-1.1 | Expired or invalid session token                         | `backend/tests/authenticate.test.js`                                  | `Expired or invalid session token`                         |
+| US-1.1 | API request includes session token                       | `backend/tests/authenticate.test.js`, `frontend/tests/services.test.js` | `API request includes session token`                     |
+| US-1.1 | Expired or invalid session token                         | `backend/tests/authenticate.test.js`, `frontend/tests/services.test.js` | `Expired or invalid session token`                       |
 | US-1.2 | First-time user gets a requestor account                 | `backend/tests/auth.test.js`                                          | `First-time user gets a requestor account`                 |
 | US-1.2 | Seeded user is linked on first Google sign-in            | `backend/tests/auth.test.js`                                          | `Seeded user is linked on first Google sign-in`            |
 | US-1.2 | Returning user keeps their role                          | `backend/tests/auth.test.js`                                          | `Returning user keeps their role`                          |
@@ -735,14 +737,14 @@ Do not implement behavior not in this spec.
 
 ## Definition of Done
 
-- [ ] Backend and frontend implemented per this spec (**FR-00N** satisfied)
+- [x] Backend and frontend implemented per this spec (**FR-00N** satisfied)
 - [ ] **Success Criteria (SC-00N)** met
-- [ ] All mapped tests pass (`npm test`)
-- [ ] Test Coverage Map complete
-- [ ] `features/reference/data-model.md` updated (if schema changed)
-- [ ] `features/reference/api.md` updated (if API changed)
-- [ ] `features/reference/behavior.md` updated (if product rules changed)
-- [ ] `.cursor/rules/security.mdc` and ADR-0002 describe Google sign-in
+- [x] All mapped tests pass (`npm test`)
+- [x] Test Coverage Map complete
+- [x] `features/reference/data-model.md` updated (if schema changed)
+- [x] `features/reference/api.md` updated (if API changed)
+- [x] `features/reference/behavior.md` updated (if product rules changed)
+- [x] `.cursor/rules/security.mdc` and ADR-0002 describe Google sign-in
 
 ---
 
