@@ -25,12 +25,18 @@ afterAll(async () => {
 describe("Feature 1 — Sign-in, Roles & User Management", () => {
   describe("US-1.4 — Role-based menus and API access", () => {
     it("Requestor cannot call an admin-only API", async () => {
-      const { auth } = await signInAs("requestor");
+      const { user, auth } = await signInAs("requestor");
 
       const res = await request(app).get(`${API}/users`).set(auth);
 
       expect(res.status).toBe(403);
       expect(res.body).toEqual({ message: "You do not have permission for this action." });
+
+      const one = await request(app).get(`${API}/users/${user.id}`).set(auth);
+      expect(one.status).toBe(403);
+      const put = await request(app).put(`${API}/users/${user.id}`).set(auth).send({ role: "admin" });
+      expect(put.status).toBe(403);
+      expect((await db.user.findByPk(user.id)).role).toBe("requestor");
     });
 
     it("Area admin cannot call an admin-only API", async () => {

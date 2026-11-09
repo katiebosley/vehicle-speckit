@@ -48,7 +48,7 @@
 **So that** each role only uses the tools meant for it
 
 **Priority:** P1  
-**Independent test:** Sign in as a `requestor` — **Users** is hidden and `GET /vehicle/users` returns `403`; signed out — protected routes redirect to login and the API returns `401`  
+**Independent test:** Sign in as a `requestor` — **Users** is hidden and `GET /vehicle-t2/users` returns `403`; signed out — protected routes redirect to login and the API returns `401`  
 **Acceptance scenarios:** see ### US-1.4 under Acceptance Criteria
 
 ### US-1.5: View and search users
@@ -97,21 +97,21 @@
 
 ### Functional Requirements
 
-- **FR-001**: Users MUST sign in only with Google Identity Services. The frontend obtains a Google ID token (`credential`) and sends it to `POST /vehicle/login`. There MUST be no username/password login and no register screen or endpoint.
+- **FR-001**: Users MUST sign in only with Google Identity Services. The frontend obtains a Google ID token (`credential`) and sends it to `POST /vehicle-t2/login`. There MUST be no username/password login and no register screen or endpoint.
 - **FR-002**: The backend MUST verify the ID token with `google-auth-library` (`OAuth2Client.verifyIdToken`) using the `GOOGLE_CLIENT_ID` environment variable as the audience. A missing, malformed, expired, or wrong-audience token MUST return `401` with `{ "message": "Google sign-in failed." }`.
 - **FR-003**: Only OC Google accounts MAY sign in. A verified token whose email domain is not an allowed OC domain MUST return `403` with `{ "message": "Sign in with your OC Google account." }` and MUST NOT create a user.
 - **FR-004**: On a verified sign-in the backend MUST find the user by `google_id`. If none matches, it MUST find the user by `email` (case-insensitive) and store the Google `sub` in `google_id` (links seeded users). If neither matches, it MUST create a user with `role` `requestor`, `is_approved_driver` `false`, `is_active` `true`, and `first_name` / `last_name` from the token's `given_name` / `family_name`. An existing user's `role` MUST NOT change on sign-in.
 - **FR-005**: Sessions MUST use the **JWT + Session table** pattern: token stored server-side; client sends `Authorization: Bearer <token>`. Session lifetime MUST be **24 hours**. Login MUST reuse a non-expired session for the same user when one exists.
-- **FR-006**: A user with `is_active` `false` MUST receive `403` with `{ "message": "Your account has been deactivated." }` on `POST /vehicle/login`. `authenticate` MUST reject the session of an inactive user with `401`.
+- **FR-006**: A user with `is_active` `false` MUST receive `403` with `{ "message": "Your account has been deactivated." }` on `POST /vehicle-t2/login`. `authenticate` MUST reject the session of an inactive user with `401`.
 - **FR-007**: `authenticate` MUST set `req.user = { id, role, email }` from the session's user. This feature MUST export `requireRole(...roles)` middleware from `backend/app/authorization/authorization.js`. It MUST run after `authenticate` and return `403` with `{ "message": "You do not have permission for this action." }` when `req.user.role` is not in `roles`.
-- **FR-008**: `role` MUST be one of `admin`, `area_admin`, `requestor`. Any other value on `PUT /vehicle/users/:userId` MUST return `400` with `{ "message": "Role must be admin, area_admin, or requestor." }`.
+- **FR-008**: `role` MUST be one of `admin`, `area_admin`, `requestor`. Any other value on `PUT /vehicle-t2/users/:userId` MUST return `400` with `{ "message": "Role must be admin, area_admin, or requestor." }`.
 - **FR-009**: `MenuBar` MUST be mounted in `App.vue` and visible on every route, including `login`. It MUST show the signed-in user's name, **Profile** (all roles), **Users** (role `admin` only), and **Sign out** when a session exists. With no session it MUST show no nav items and no **Sign out**. Items MUST be filtered by `user.role` from the `localStorage` `user` payload.
 - **FR-010**: The Vue router MUST redirect to `login` for every route except `login` when there is no session, and MUST redirect a signed-in user away from `login` to `home`. A route marked with allowed roles (e.g. `users` → `admin`) MUST redirect a signed-in user whose role is not allowed to `home`.
-- **FR-011**: `GET /vehicle/users` MUST require role `admin`. It MUST return all users ordered by `last_name`, then `first_name`. Optional query `search` MUST filter case-insensitively to users whose first name, last name, or email contains the trimmed search text.
-- **FR-012**: `PUT /vehicle/users/:userId` MUST require role `admin` and MUST only change `role`, `isApprovedDriver`, `licenseExpiration`, and `isActive`. Any other fields in the body (name, email, phone, `googleId`) MUST be ignored. Unknown `userId` → `404` with `{ "message": "User with id=<id> not found." }`.
-- **FR-013**: An admin MUST NOT change their own `role` or `isActive` through `PUT /vehicle/users/:userId`. Attempting it MUST return `400` with `{ "message": "You cannot change your own role or active status." }`.
+- **FR-011**: `GET /vehicle-t2/users` MUST require role `admin`. It MUST return all users ordered by `last_name`, then `first_name`. Optional query `search` MUST filter case-insensitively to users whose first name, last name, or email contains the trimmed search text.
+- **FR-012**: `PUT /vehicle-t2/users/:userId` MUST require role `admin` and MUST only change `role`, `isApprovedDriver`, `licenseExpiration`, and `isActive`. Any other fields in the body (name, email, phone, `googleId`) MUST be ignored. Unknown `userId` → `404` with `{ "message": "User with id=<id> not found." }`.
+- **FR-013**: An admin MUST NOT change their own `role` or `isActive` through `PUT /vehicle-t2/users/:userId`. Attempting it MUST return `400` with `{ "message": "You cannot change your own role or active status." }`.
 - **FR-014**: When `isApprovedDriver` is `true`, `licenseExpiration` MUST be a valid date. Missing → `400` with `{ "message": "License expiration is required for approved drivers." }` (same text as the client message). Turning `isApprovedDriver` off MUST keep the stored `licenseExpiration`.
-- **FR-015**: `GET /vehicle/profile` and `PUT /vehicle/profile` MUST require a session and MUST only read or write the signed-in user (`req.user.id`). `PUT` MUST only change `firstName`, `lastName`, and `phone`; `role`, `email`, `isApprovedDriver`, `licenseExpiration`, and `isActive` in the body MUST be ignored. `firstName` and `lastName` MUST be required, trimmed, and at most 100 characters. `phone` is optional, trimmed, at most 20 characters; too-long message: **"Phone must be 20 characters or fewer."**
+- **FR-015**: `GET /vehicle-t2/profile` and `PUT /vehicle-t2/profile` MUST require a session and MUST only read or write the signed-in user (`req.user.id`). `PUT` MUST only change `firstName`, `lastName`, and `phone`; `role`, `email`, `isApprovedDriver`, `licenseExpiration`, and `isActive` in the body MUST be ignored. `firstName` and `lastName` MUST be required, trimmed, and at most 100 characters. `phone` is optional, trimmed, at most 20 characters; too-long message: **"Phone must be 20 characters or fewer."**
 - **FR-016**: This feature MUST provide `npm run promote-admin --prefix backend -- <email>` (script in `backend/app/scripts/`) that sets `role` to `admin` for an existing user with that email, and exits with a non-zero code and a clear message if no user has that email. This bootstraps the first admin before [Feature 2](feature-2-areas-area-admins-deploy.md) seed data exists.
 - **FR-017**: API responses MUST NOT include `google_id`. User JSON uses camelCase keys (`firstName`, `lastName`, `isApprovedDriver`, `licenseExpiration`, `isActive`) mapped to the snake_case columns in **Data Model Requirements**.
 
@@ -120,7 +120,7 @@
 ## Assumptions
 
 
-- The vehicle API mounts at `/vehicle/…` 
+- The vehicle API mounts at `/vehicle-t2/…` 
 - A Google Cloud OAuth client exists. Backend reads `GOOGLE_CLIENT_ID` from `backend/.env`; frontend reads `VITE_GOOGLE_CLIENT_ID`. Both are the same client ID.
 - `google-auth-library` is a new backend dependency. `security.mdc` and ADR-0002 describe username/password + bcrypt; they MUST be updated in the implementation PR to describe Google sign-in.
 - Automated tests MUST NOT call Google. Backend tests mock `verifyIdToken`; frontend tests mock the Google Identity Services script and `authServices`.
@@ -136,7 +136,7 @@
 - Admin edits their own row → may change `isApprovedDriver` / `licenseExpiration`; role and active changes are refused (`400`).
 - `search` that is empty or whitespace-only → returns all users.
 - `licenseExpiration` in the past is accepted; Feature 5 (review and vehicle assignment) refuses expired drivers at assignment time.
-- Non-integer `userId` (e.g. `/vehicle/users/abc`) → `404`.
+- Non-integer `userId` (e.g. `/vehicle-t2/users/abc`) → `404`.
 - Profile `firstName` whitespace-only → client **"Required"**; API `400` `{ "message": "First name is required." }`.
 
 ## Success Criteria
@@ -144,7 +144,7 @@
 - **SC-001**: Every Gherkin scenario in this feature has at least one automated test before merge.
 - **SC-002**: In one manual pass a new OC user can sign in with Google, land on `home` as a `requestor`, edit their profile, and sign out.
 - **SC-003**: An admin can find a user by search, make them an `area_admin`, mark them an approved driver with a license date, and deactivate them; the deactivated user cannot sign in.
-- **SC-004**: A `requestor` and an `area_admin` cannot see **Users** and get `403` from every `/vehicle/users` endpoint.
+- **SC-004**: A `requestor` and an `area_admin` cannot see **Users** and get `403` from every `/vehicle-t2/users` endpoint.
 - **SC-005**: `npm test` passes with backend auth/users/profile and frontend router/login/`MenuBar`/users/profile coverage.
 
 ---
@@ -155,11 +155,11 @@ Each user owns their own profile. Only admins can see or change other users. Lat
 
 | Rule               | Requirement                                                                                                     |
 | ------------------ | --------------------------------------------------------------------------------------------------------------- |
-| **Own profile**    | `GET` / `PUT /vehicle/profile` read and write only `req.user.id`. No `userId` parameter.                        |
-| **Other users**    | Only `admin` may `GET` / `PUT /vehicle/users…`. Other roles → `403`.                                            |
+| **Own profile**    | `GET` / `PUT /vehicle-t2/profile` read and write only `req.user.id`. No `userId` parameter.                        |
+| **Other users**    | Only `admin` may `GET` / `PUT /vehicle-t2/users…`. Other roles → `403`.                                            |
 | **Self-lockout**   | An admin cannot change their own `role` or `isActive` (`400`).                                                  |
 | **Sensitive data** | `google_id` is never returned. There are no passwords.                                                          |
-| **Implementation** | `authenticate` on every non-login endpoint; `requireRole("admin")` after `authenticate` on `/vehicle/users…`.   |
+| **Implementation** | `authenticate` on every non-login endpoint; `requireRole("admin")` after `authenticate` on `/vehicle-t2/users…`.   |
 
 ---
 
@@ -167,13 +167,13 @@ Each user owns their own profile. Only admins can see or change other users. Lat
 
 | Method | Endpoint                 | Auth       | Purpose                                                      |
 | ------ | ------------------------ | ---------- | ------------------------------------------------------------ |
-| `POST` | `/vehicle/login`         | No         | Verify Google credential, find/create user, return session   |
-| `POST` | `/vehicle/logout`        | Yes        | Invalidate current session token                             |
-| `GET`  | `/vehicle/users`         | Yes, admin | List all users; optional `?search=`                          |
-| `GET`  | `/vehicle/users/:userId` | Yes, admin | Fetch one user                                               |
-| `PUT`  | `/vehicle/users/:userId` | Yes, admin | Change role, approved driver, license expiration, active     |
-| `GET`  | `/vehicle/profile`       | Yes        | Fetch the signed-in user's profile                           |
-| `PUT`  | `/vehicle/profile`       | Yes        | Update the signed-in user's first name, last name, phone     |
+| `POST` | `/vehicle-t2/login`         | No         | Verify Google credential, find/create user, return session   |
+| `POST` | `/vehicle-t2/logout`        | Yes        | Invalidate current session token                             |
+| `GET`  | `/vehicle-t2/users`         | Yes, admin | List all users; optional `?search=`                          |
+| `GET`  | `/vehicle-t2/users/:userId` | Yes, admin | Fetch one user                                               |
+| `PUT`  | `/vehicle-t2/users/:userId` | Yes, admin | Change role, approved driver, license expiration, active     |
+| `GET`  | `/vehicle-t2/profile`       | Yes        | Fetch the signed-in user's profile                           |
+| `PUT`  | `/vehicle-t2/profile`       | Yes        | Update the signed-in user's first name, last name, phone     |
 
 **Login request body:**
 
@@ -236,7 +236,7 @@ Each user owns their own profile. Only admins can see or change other users. Lat
 }
 ```
 
-`GET /vehicle/users` returns an array of this object.
+`GET /vehicle-t2/users` returns an array of this object.
 
 **Error response:** `{ "message": "Human-readable explanation." }` with appropriate HTTP status.
 
@@ -249,7 +249,7 @@ Each user owns their own profile. Only admins can see or change other users. Lat
 - `MenuBar` visible (no nav items, no **Sign out**).
 - Heading: **OC Vehicle Scheduling**
 - One action: Google Identity Services rendered **Sign in with Google** button. No username/password fields and no register link.
-- While `POST /vehicle/login` is in flight, show a progress indicator.
+- While `POST /vehicle-t2/login` is in flight, show a progress indicator.
 - Errors from the API (`401`, `403`) show in `<v-alert type="error">` with the API `message`.
 
 ### [View: Home] — route name `home` — path `/`
@@ -261,7 +261,7 @@ Each user owns their own profile. Only admins can see or change other users. Lat
 ### [View: Users] — route name `users` — path `/users` — `Users.vue`
 
 - Heading: **Users**. Admin-only route (FR-010).
-- Search field (`v-text-field`, label **Search users**) filters by name or email via `GET /vehicle/users?search=`.
+- Search field (`v-text-field`, label **Search users**) filters by name or email via `GET /vehicle-t2/users?search=`.
 - List: `v-table`; columns **name** (last, first), **email**, **role**, **approved driver** (Yes/No), **license expires**, **status** (Active/Inactive); ordered by last name, first name.
 - Icon-only row action, `size="small"`, `aria-label` **Edit user**, opens **Edit User** dialog.
 - No **+ New user** — accounts are created on first sign-in.
@@ -288,7 +288,7 @@ Each user owns their own profile. Only admins can see or change other users. Lat
 - Mount `MenuBar` in `App.vue` above `<v-main>`. Visible on every route.
 - No session: no nav items, no **Sign out**.
 - Session: user's name, **Profile** (all roles), **Users** (`admin`), **Sign out**.
-- **Sign out** calls `POST /vehicle/logout`, calls `google.accounts.id.disableAutoSelect()`, clears `localStorage` `user`, and routes to `login`.
+- **Sign out** calls `POST /vehicle-t2/logout`, calls `google.accounts.id.disableAutoSelect()`, clears `localStorage` `user`, and routes to `login`.
 - Later features add items by role (Feature 2 adds **Areas** for `admin` and **My Areas** for `area_admin`). They MUST NOT create a second `MenuBar`.
 
 ---
@@ -357,21 +357,21 @@ Team ERD (target model for all features): [`docs/erd/vehicle-scheduling-erd.png`
 #### Scenario: User signs in with a non-OC Google account
 
 - **Given** I am on the login page
-- **When** I send `POST /vehicle/login` with a valid Google credential for `someone@gmail.com`
+- **When** I send `POST /vehicle-t2/login` with a valid Google credential for `someone@gmail.com`
 - **Then** the API returns `403` with `{ "message": "Sign in with your OC Google account." }`
 - **And** no user row is created for `someone@gmail.com`
 
 #### Scenario: User signs in with an invalid Google credential
 
 - **Given** I am on the login page
-- **When** I send `POST /vehicle/login` with a credential that fails Google verification
+- **When** I send `POST /vehicle-t2/login` with a credential that fails Google verification
 - **Then** the API returns `401` with `{ "message": "Google sign-in failed." }`
 - **And** the error is displayed in a `<v-alert type="error">`
 
 #### Scenario: Deactivated user cannot sign in
 
 - **Given** a user exists with email `former@oc.edu` and `isActive` `false`
-- **When** I send `POST /vehicle/login` with a valid Google credential for `former@oc.edu`
+- **When** I send `POST /vehicle-t2/login` with a valid Google credential for `former@oc.edu`
 - **Then** the API returns `403` with `{ "message": "Your account has been deactivated." }`
 - **And** no session is created
 
@@ -403,14 +403,14 @@ Team ERD (target model for all features): [`docs/erd/vehicle-scheduling-erd.png`
 #### Scenario: First-time user gets a requestor account
 
 - **Given** no user exists with email `newuser@oc.edu`
-- **When** I send `POST /vehicle/login` with a valid Google credential for `newuser@oc.edu` with given name `New` and family name `User`
+- **When** I send `POST /vehicle-t2/login` with a valid Google credential for `newuser@oc.edu` with given name `New` and family name `User`
 - **Then** the API returns `200` with `role` `requestor`
 - **And** a user row exists with email `newuser@oc.edu`, `first_name` `New`, `last_name` `User`, `is_approved_driver` `false`, `is_active` `true`, and the Google `sub` in `google_id`
 
 #### Scenario: Seeded user is linked on first Google sign-in
 
 - **Given** a user exists with email `areaadmin@oc.edu`, role `area_admin`, and no `google_id`
-- **When** I send `POST /vehicle/login` with a valid Google credential for `AreaAdmin@oc.edu`
+- **When** I send `POST /vehicle-t2/login` with a valid Google credential for `AreaAdmin@oc.edu`
 - **Then** the API returns `200` with `role` `area_admin`
 - **And** that user's `google_id` is set to the Google `sub`
 - **And** only one user row exists with email `areaadmin@oc.edu`
@@ -450,7 +450,7 @@ Team ERD (target model for all features): [`docs/erd/vehicle-scheduling-erd.png`
 #### Scenario: Unauthenticated API request
 
 - **Given** I have no valid session token
-- **When** I request `GET /vehicle/profile`
+- **When** I request `GET /vehicle-t2/profile`
 - **Then** the API returns `401` with an unauthorized message
 
 #### Scenario: MenuBar is visible on the login page without nav items
@@ -482,13 +482,13 @@ Team ERD (target model for all features): [`docs/erd/vehicle-scheduling-erd.png`
 #### Scenario: Requestor cannot call an admin-only API
 
 - **Given** I am signed in as a user with role `requestor`
-- **When** I request `GET /vehicle/users`
+- **When** I request `GET /vehicle-t2/users`
 - **Then** the API returns `403` with `{ "message": "You do not have permission for this action." }`
 
 #### Scenario: Area admin cannot call an admin-only API
 
 - **Given** I am signed in as a user with role `area_admin`
-- **When** I send `PUT /vehicle/users/2` with `{ "role": "admin" }`
+- **When** I send `PUT /vehicle-t2/users/2` with `{ "role": "admin" }`
 - **Then** the API returns `403` with `{ "message": "You do not have permission for this action." }`
 - **And** user `2`'s role is unchanged
 
@@ -496,7 +496,7 @@ Team ERD (target model for all features): [`docs/erd/vehicle-scheduling-erd.png`
 
 - **Given** I am signed in as a user with role `requestor`
 - **And** an admin has since set my `isActive` to `false`
-- **When** I request `GET /vehicle/profile` with my existing token
+- **When** I request `GET /vehicle-t2/profile` with my existing token
 - **Then** the API returns `401` with an unauthorized message
 
 ---
@@ -547,7 +547,7 @@ Team ERD (target model for all features): [`docs/erd/vehicle-scheduling-erd.png`
 #### Scenario: Admin sets an invalid role
 
 - **Given** I am signed in as a user with role `admin`
-- **When** I send `PUT /vehicle/users/2` with `{ "role": "superuser" }`
+- **When** I send `PUT /vehicle-t2/users/2` with `{ "role": "superuser" }`
 - **Then** the API returns `400` with `{ "message": "Role must be admin, area_admin, or requestor." }`
 - **And** user `2`'s role is unchanged
 
@@ -558,27 +558,27 @@ Team ERD (target model for all features): [`docs/erd/vehicle-scheduling-erd.png`
 - **When** I open **Edit User** for `Bob Jones`, turn **Active** off, and click **Save**
 - **Then** the API returns `200` with `isActive` `false`
 - **And** the row shows **Inactive**
-- **And** Bob's next `POST /vehicle/login` returns `403` with `{ "message": "Your account has been deactivated." }`
+- **And** Bob's next `POST /vehicle-t2/login` returns `403` with `{ "message": "Your account has been deactivated." }`
 
 #### Scenario: Admin reactivates a user
 
 - **Given** I am signed in as a user with role `admin`
 - **And** user `Bob Jones` is inactive
-- **When** I send `PUT /vehicle/users/:userId` for Bob with `{ "isActive": true }`
+- **When** I send `PUT /vehicle-t2/users/:userId` for Bob with `{ "isActive": true }`
 - **Then** the API returns `200` with `isActive` `true`
 - **And** Bob can sign in again
 
 #### Scenario: Admin cannot change their own role or active status
 
 - **Given** I am signed in as a user with role `admin`
-- **When** I send `PUT /vehicle/users/:userId` for my own id with `{ "role": "requestor" }`
+- **When** I send `PUT /vehicle-t2/users/:userId` for my own id with `{ "role": "requestor" }`
 - **Then** the API returns `400` with `{ "message": "You cannot change your own role or active status." }`
 - **And** my role is still `admin`
 
 #### Scenario: Admin edits a user that does not exist
 
 - **Given** I am signed in as a user with role `admin`
-- **When** I send `PUT /vehicle/users/99999` with `{ "role": "requestor" }`
+- **When** I send `PUT /vehicle-t2/users/99999` with `{ "role": "requestor" }`
 - **Then** the API returns `404` with `{ "message": "User with id=99999 not found." }`
 
 #### Scenario: Admin cancels editing a user
@@ -612,14 +612,14 @@ Team ERD (target model for all features): [`docs/erd/vehicle-scheduling-erd.png`
 #### Scenario: API rejects an approved driver without a license expiration
 
 - **Given** I am signed in as a user with role `admin`
-- **When** I send `PUT /vehicle/users/2` with `{ "isApprovedDriver": true, "licenseExpiration": null }`
+- **When** I send `PUT /vehicle-t2/users/2` with `{ "isApprovedDriver": true, "licenseExpiration": null }`
 - **Then** the API returns `400` with `{ "message": "License expiration is required for approved drivers." }`
 
 #### Scenario: Admin removes approved driver status
 
 - **Given** I am signed in as a user with role `admin`
 - **And** `Bob Jones` is an approved driver with license expiration `2028-05-31`
-- **When** I send `PUT /vehicle/users/:userId` for Bob with `{ "isApprovedDriver": false }`
+- **When** I send `PUT /vehicle-t2/users/:userId` for Bob with `{ "isApprovedDriver": false }`
 - **Then** the API returns `200` with `isApprovedDriver` `false`
 - **And** `licenseExpiration` is still `2028-05-31`
 
@@ -661,7 +661,7 @@ Team ERD (target model for all features): [`docs/erd/vehicle-scheduling-erd.png`
 #### Scenario: User cannot change their own role through the profile
 
 - **Given** I am signed in as a user with role `requestor`
-- **When** I send `PUT /vehicle/profile` with `{ "firstName": "Jane", "lastName": "Doe", "role": "admin" }`
+- **When** I send `PUT /vehicle-t2/profile` with `{ "firstName": "Jane", "lastName": "Doe", "role": "admin" }`
 - **Then** the API returns `200` with `role` `requestor`
 - **And** my role in the database is still `requestor`
 
