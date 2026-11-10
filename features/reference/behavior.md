@@ -1,6 +1,6 @@
 # Behavior & Rules Reference
 
-**Living snapshot** of product rules currently in force on `dev`.
+**Living snapshot** of product rules for Features 1 and 2.
 
 These files answer: *"What rules does the app enforce right now?"*  
 They do **not** authorize new scope — implement only from `features/feature-*.md`.
@@ -32,7 +32,7 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | `authenticate` sets `req.user = { id, role, email }`; `requireRole(...roles)` returns `403` | `authorization/authorization.js` | FR-007 |
 | `/users…` is admin-only (API `403`, route redirect to `home`) | `user.routes.js`, `router.js` `meta.roles` | FR-010, FR-011 |
 | Signed-out users are redirected to `login`; signed-in users are redirected away from `login` | `router.js` `authGuard` | FR-010 |
-| `MenuBar` on every route; Profile for all roles, Users for admin, nothing when signed out | `MenuBar.vue` | FR-009 |
+| `MenuBar` on every route; Profile for all roles, Users and Areas for admin, My Areas for area admin, nothing when signed out | `MenuBar.vue` | Feature 1 FR-009, Feature 2 FR-014 |
 
 ## User management — Feature 1
 
@@ -53,3 +53,18 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | Users read/write only their own profile | `profile.controller.js` uses `req.user.id` | FR-015 |
 | Editable: first name, last name (required, ≤100), phone (optional, ≤20); other fields ignored | `profile.controller.js`, `Profile.vue` | FR-015 |
 | Saving updates the stored `user` name so `MenuBar` shows it | `Profile.vue` `user-changed` event | US-1.8 |
+
+## Areas — Feature 2
+
+| Rule | Enforcement | Provenance |
+|------|-------------|------------|
+| Admins see every area, ordered by name. Other roles see active areas only on the full list. | `GET /areas` | FR-002 |
+| Area name is required, trimmed, at most 100 characters, and unique ignoring case. Deactivate with `isActive: false`; there is no delete. | Area handlers, `Areas.vue` | FR-003, FR-004, FR-005 |
+| Only an active `area_admin` can be assigned, once per area. Many admins per area, many areas per person. | `POST /areas/:areaId/admins` | FR-006, FR-007 |
+| Changing a user's role away from `area_admin` deletes their `area_admins` rows in that update. | `user.controller.js` transaction | FR-009 |
+| `admin` manages every area. `area_admin` manages assigned areas, including inactive ones. `requestor` manages none. | `getManagedAreaIds` | FR-010, FR-012 |
+| One area: admin, or an area admin who manages it. Non-integer id is 404. Other area admins get 403. | `requireAreaAccess` | FR-011, FR-013 |
+| `/areas` is admin-only. `/my-areas` is area-admin-only. | `router.js` `meta.roles` | FR-014 |
+| Areas list shows each admin's name, or **No admins**. My Areas shows **Inactive** on inactive areas. | `Areas.vue`, `MyAreas.vue` | US-2.3, US-2.4 |
+| `npm run seed --prefix backend` loads sample users, areas, and assignments, and does not overwrite existing rows. | `backend/scripts/seed.mjs` | FR-015, FR-016 |
+| Push to `main` runs Test before deploy. Backend `.env` gets `GOOGLE_CLIENT_ID`. Frontend build gets `VITE_GOOGLE_CLIENT_ID`. | `.github/workflows/deploy.yml` | FR-017, FR-018 |

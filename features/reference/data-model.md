@@ -1,6 +1,6 @@
 # Data Model Reference
 
-**Status:** Feature 1 (`users`, `sessions`) on `dev`.
+**Status:** Feature 1 (`users`, `sessions`) and Feature 2 (`areas`, `area_admins`).
 
 Update this file when a feature that defines schema merges to `dev`.
 
@@ -47,9 +47,36 @@ Model: `backend/app/models/user.model.js`. `defaultScope` excludes `google_id`; 
 
 Model: `backend/app/models/session.model.js`.
 
+### `areas` — Feature 2
+
+| Column        | Type        | Rules                                              |
+| ------------- | ----------- | -------------------------------------------------- |
+| `id`          | INTEGER PK  | Auto-increment                                     |
+| `name`        | STRING(100) | Required, trimmed, unique. API also rejects another casing of an existing name. |
+| `description` | TEXT        | Optional                                           |
+| `is_active`   | BOOLEAN     | Default `true`                                     |
+| `created_at`  | DATE        | Sequelize timestamps                               |
+| `updated_at`  | DATE        | Sequelize timestamps                               |
+
+Model: `backend/app/models/area.model.js`.
+
+### `area_admins` — Feature 2
+
+| Column        | Type           | Rules                                      |
+| ------------- | -------------- | ------------------------------------------ |
+| `user_id`     | INTEGER PK, FK | References `users.id`, `ON DELETE CASCADE` |
+| `area_id`     | INTEGER PK, FK | References `areas.id`, `ON DELETE CASCADE` |
+| `assigned_at` | DATE           | Required; defaults to now                  |
+
+Composite primary key (`user_id`, `area_id`). No `created_at` / `updated_at`.
+
+Model: `backend/app/models/areaAdmin.model.js`.
+
 ## Associations
 
 Defined in `backend/app/models/index.js`:
 
 - `User hasMany Session` (`userId`)
 - `Session belongsTo User` (`userId`, alias `user`)
+- `User belongsToMany Area` through `area_admins` (`userId`, alias `managedAreas`)
+- `Area belongsToMany User` through `area_admins` (`areaId`, alias `admins`)

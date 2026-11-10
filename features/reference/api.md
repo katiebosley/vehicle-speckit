@@ -1,8 +1,8 @@
 # API Reference
 
-**Status:** Feature 1 endpoints on `dev`.
+**Status:** Feature 1 and Feature 2 endpoints.
 
-API mount path is `/vehicle-t2` (see `backend/server.js`).
+API mount path is `/vehicle-t2` (see `backend/server.js`). The feature spec writes these routes as `/vehicle`.
 
 ## Endpoints
 
@@ -15,6 +15,13 @@ API mount path is `/vehicle-t2` (see `backend/server.js`).
 | `PUT`  | `/vehicle-t2/users/:userId` | Yes, admin | Change `role`, `isApprovedDriver`, `licenseExpiration`, `isActive` | 1 |
 | `GET`  | `/vehicle-t2/profile`       | Yes        | Fetch the signed-in user                                   | 1       |
 | `PUT`  | `/vehicle-t2/profile`       | Yes        | Update own `firstName`, `lastName`, `phone`                | 1       |
+| `GET`  | `/vehicle-t2/areas`         | Yes        | List areas. Admin: all. Other roles: active only. Ordered by name. | 2 |
+| `GET`  | `/vehicle-t2/areas/mine`    | Yes, admin / area admin | Areas the user manages, including inactive | 2 |
+| `GET`  | `/vehicle-t2/areas/:areaId` | Yes, admin / area admin | One area. Area admins only for an area they manage. | 2 |
+| `POST` | `/vehicle-t2/areas`         | Yes, admin | Create an area | 2 |
+| `PUT`  | `/vehicle-t2/areas/:areaId` | Yes, admin | Update name, description, `isActive` | 2 |
+| `POST` | `/vehicle-t2/areas/:areaId/admins` | Yes, admin | Assign an area admin. Body `{ "userId": <id> }` | 2 |
+| `DELETE` | `/vehicle-t2/areas/:areaId/admins/:userId` | Yes, admin | Remove an area admin | 2 |
 
 ### `POST /login`
 
@@ -65,13 +72,21 @@ Success `200`:
 | Status | Message                                                  | Endpoint                 |
 | ------ | -------------------------------------------------------- | ------------------------ |
 | `401`  | `Unauthorized! …`                                        | Any authenticated route  |
-| `403`  | `You do not have permission for this action.`            | `/users…` as non-admin   |
+| `403`  | `You do not have permission for this action.`            | Admin-only routes as a non-admin |
 | `400`  | `Role must be admin, area_admin, or requestor.`          | `PUT /users/:userId`     |
 | `400`  | `You cannot change your own role or active status.`      | `PUT /users/:userId`     |
 | `400`  | `License expiration is required for approved drivers.`   | `PUT /users/:userId`     |
-| `404`  | `User with id=<id> not found.`                           | `GET`/`PUT /users/:userId` |
+| `404`  | `User with id=<id> not found.`                           | `GET`/`PUT /users/:userId`, `POST /areas/:areaId/admins` |
 | `400`  | `First name is required.` / `Last name is required.`     | `PUT /profile`           |
 | `400`  | `Phone must be 20 characters or fewer.`                  | `PUT /profile`           |
+| `400`  | `Area name is required.`                                 | `POST`/`PUT /areas`      |
+| `400`  | `Area name must be 100 characters or fewer.`             | `POST`/`PUT /areas`      |
+| `400`  | `Area name is already taken.`                            | `POST`/`PUT /areas`      |
+| `400`  | `User must be an active area admin.`                     | `POST /areas/:areaId/admins` |
+| `400`  | `User is already an admin of this area.`                 | `POST /areas/:areaId/admins` |
+| `403`  | `You do not manage this area.`                           | `GET /areas/:areaId`     |
+| `404`  | `Area with id=<id> not found.`                           | Area routes              |
+| `404`  | `User is not an admin of this area.`                     | `DELETE /areas/:areaId/admins/:userId` |
 
 ## Conventions
 

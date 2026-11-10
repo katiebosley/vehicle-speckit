@@ -10,7 +10,8 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "bundle": "node scripts/make-deploy.mjs",
-    "promote-admin": "node app/scripts/promote-admin.js"
+    "promote-admin": "node app/scripts/promote-admin.js",
+    "seed": "node scripts/seed.mjs"
   },
   "keywords": [
     "node.js",
