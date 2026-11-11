@@ -2,13 +2,13 @@
 
 **Feature ID:** 4
 **Branch pattern:** `feature/4-making-and-tracking-requests`
-**Status:** Draft
+**Status:** Ready
 **Created:** 2026-11-04
 **Input:** Requestors submit, validate, list, view, edit, and cancel their own vehicle reservation requests (form + “my requests” list/detail).
-**Depends on:** [Feature 1 — Sign-in, Roles & User Management](./feature-1-google-auth-user-management.md) (who is asking), [Feature 2 — Areas, Area Admins & Deployment](./feature-2-areas-area-admins-deploy.md) (areas to pick from), Feature 3 — fleet / vehicle types (in progress; vehicle types to ask for)
+**Depends on:** [Feature 1 — Sign-in, Roles & User Management](./feature-1-google-auth-user-management.md) (who is asking), [Feature 2 — Areas, Area Admins & Deployment](./feature-2-areas-area-admins-deploy.md) (areas to pick from), [Feature 3 — Fleet Management](./feature-3-fleet-management.md) (`vehicle_types` + list for the form)
 **Related:** Hands pending requests with a known `areaId` to Feature 5 (review queue). F5 writes review fields; a later fulfillment feature writes vehicle/driver assignments that this feature only displays.
 
-> **Draft blocker:** Feature 3 is still in progress. Keep Status `Draft` until the F3 filename and vehicle-type list contract are known; then wire the form dropdown endpoint and set `Ready`. Do not invent F3 routes beyond validating `vehicleTypeId` on create/update.
+> **Implementation gate:** Product code for this feature MUST wait until Features 1–2 and Feature 3’s `vehicle_types` table + `GET /vehicle-t2/vehicle-types` exist on `dev`. This feature consumes that list endpoint; it MUST NOT create or edit vehicle types.
 
 ---
 
@@ -91,7 +91,7 @@
 - **FR-006**: System MUST reject create/update with `400` and message `"Return must be after departure."` when `returnAt` is less than or equal to `departureAt`.
 - **FR-007**: System MUST reject create/update with `400` and message `"Departure must be in the future."` when `departureAt` is not strictly after the server’s current time.
 - **FR-008**: System MUST reject create/update with `400` and message `"Passenger count and vehicles needed must be at least 1."` when `passengerCount` or `vehiclesNeeded` is not an integer ≥ 1.
-- **FR-009**: System MUST reject create/update when `areaId` does not reference an **active** area (Feature 2), or `vehicleTypeId` does not reference a usable vehicle type (Feature 3) — `400` with message `"Invalid area or vehicle type."`.
+- **FR-009**: System MUST reject create/update when `areaId` does not reference an **active** area (Feature 2), or `vehicleTypeId` does not reference a **usable** vehicle type (Feature 3: type exists and `isActive` is true) — `400` with message `"Invalid area or vehicle type."`.
 - **FR-010**: System MUST return the authenticated requestor’s requests only on list, ordered by `createdAt` descending (newest first), including `status` and summary fields needed by the list screen.
 - **FR-011**: System MUST return full detail for an owned request, including nullable review fields (`reviewedBy`, `reviewedAt`, `reviewNotes`) and an `assignments` array of `{ vehicle, driver }` summaries when assignment rows exist; otherwise `assignments: []`.
 - **FR-012**: System MUST allow update of an owned request only while `status = "pending"`. Updates MUST apply the same validation rules as create. Updates MUST NOT modify review fields or `requesterId`.
@@ -107,10 +107,10 @@
 ## Assumptions
 
 - Feature 1 provides Google sign-in, Bearer sessions, `authenticate`, `requireRole`, roles including `requestor`, and the shared `MenuBar`.
-- Feature 2 provides areas; requestors load the form dropdown via `GET /vehicle/areas` (active areas only). Create/update requires an **active** `areaId`.
-- Feature 3 (in progress) will provide a `vehicle_types` table (or equivalent) and an authenticated way to list types for the form. Exact list route and “usable type” rules follow the Feature 3 spec when Ready. Until then, create/update still validates that `vehicleTypeId` exists/is usable per FR-009.
+- Feature 2 provides areas; requestors load the form dropdown via `GET /vehicle-t2/areas` (active areas only). Create/update requires an **active** `areaId`.
+- Feature 3 provides `vehicle_types` and `GET /vehicle-t2/vehicle-types` (authenticated; requestor receives active types only, ordered by `name` — F3 FR-003). A type is **usable** when `isActive` is true (F3 FR-007). Create/update validates `vehicleTypeId` per FR-009. This feature does not own type CRUD.
 - API JSON uses **camelCase** (Feature 1 FR-017 pattern). Sequelize models use `underscored: true` so JS attributes are camelCase and columns match the ERD’s snake_case names.
-- API mount is `/vehicle/…` (same as Features 1 and 2).
+- API mount is `/vehicle-t2/…` (same scaffold mount as Feature 3 and the app shell).
 - Review fields exist on `requests` for display but are written only by Feature 5.
 - `assignments` on detail may stay empty until a later fulfillment feature persists assignment rows. Feature 4 still defines the response shape.
 - “Hasn’t started yet” for cancel means: approved and `departureAt` is still in the future (no trip-log dependency in this feature).
@@ -122,7 +122,7 @@
 - `returnAt` ≤ `departureAt` → `400` `"Return must be after departure."`
 - `departureAt` in the past or equal to now → `400` `"Departure must be in the future."`
 - `passengerCount` or `vehiclesNeeded` < 1 → `400` `"Passenger count and vehicles needed must be at least 1."`
-- Unknown or inactive area, or unknown/unusable vehicle type → `400` `"Invalid area or vehicle type."`
+- Unknown or inactive area, or unknown/inactive (`isActive` false) vehicle type → `400` `"Invalid area or vehicle type."`
 - Edit when status is not `pending` → `400` `"Only pending requests can be edited."`
 - Cancel when not allowed → `400` `"This request cannot be cancelled."`
 - Another user’s request id → `404` `"Request not found."`
@@ -167,15 +167,15 @@ Each requestor owns their request rows exclusively for create, read, update, and
 
 ## API Requirements
 
-All endpoints: Auth **Yes** + role **`requestor`**. Mount: `/vehicle`. Flat JSON; errors `{ "message": "..." }`.
+All endpoints: Auth **Yes** + role **`requestor`**. Mount: `/vehicle-t2`. Flat JSON; errors `{ "message": "..." }`.
 
 | Method | Endpoint | Auth | Purpose |
 |--------|----------|------|---------|
-| `POST` | `/vehicle/requests` | Yes, requestor | Create request (`pending`) |
-| `GET` | `/vehicle/requests` | Yes, requestor | List my requests, newest first |
-| `GET` | `/vehicle/requests/:id` | Yes, requestor | My request detail (+ review fields + `assignments`) |
-| `PUT` | `/vehicle/requests/:id` | Yes, requestor | Edit pending request |
-| `POST` | `/vehicle/requests/:id/cancel` | Yes, requestor | Cancel when allowed |
+| `POST` | `/vehicle-t2/requests` | Yes, requestor | Create request (`pending`) |
+| `GET` | `/vehicle-t2/requests` | Yes, requestor | List my requests, newest first |
+| `GET` | `/vehicle-t2/requests/:id` | Yes, requestor | My request detail (+ review fields + `assignments`) |
+| `PUT` | `/vehicle-t2/requests/:id` | Yes, requestor | Edit pending request |
+| `POST` | `/vehicle-t2/requests/:id/cancel` | Yes, requestor | Cancel when allowed |
 
 **Create / update request body:**
 
@@ -242,8 +242,8 @@ When none exist: `"assignments": []`.
 
 **Dropdown data (owned elsewhere):**
 
-- Areas: `GET /vehicle/areas` (Feature 2 — requestor receives active areas only).
-- Vehicle types: Feature 3 list endpoint (TBD when F3 is Ready).
+- Areas: `GET /vehicle-t2/areas` (Feature 2 — requestor receives active areas only).
+- Vehicle types: `GET /vehicle-t2/vehicle-types` (Feature 3 — requestor receives active types only, ordered by `name`). Form select uses each type’s `id` and `name` from that response.
 
 ---
 
@@ -264,7 +264,7 @@ When none exist: `"assignments": []`.
 ### [View: New Request] — route name `request-new`
 
 *   Heading: **New Request**
-*   Fields: Area (select from `GET /vehicle/areas`), Purpose, Destination, Departure date/time, Return date/time, Passenger count, Vehicle type (select from Feature 3 list when available), Vehicles needed (default 1)
+*   Fields: Area (select from `GET /vehicle-t2/areas`), Purpose, Destination, Departure date/time, Return date/time, Passenger count, Vehicle type (select from `GET /vehicle-t2/vehicle-types` — label by `name`, value by `id`), Vehicles needed (default 1)
 *   Primary action: **Submit Request** (`oc-cta`)
 *   Secondary: **Cancel** → back to `my-requests` without saving
 *   Client-side checks may mirror FR-005–FR-008; server remains source of truth
@@ -345,12 +345,12 @@ DB columns are snake_case; API/JSON uses camelCase via Sequelize `underscored: t
 
 #### Scenario: Unauthenticated user cannot create a request
 *   **Given** I am not signed in
-*   **When** I send `POST /vehicle/requests`
+*   **When** I send `POST /vehicle-t2/requests`
 *   **Then** the API returns `401`
 
 #### Scenario: Non-requestor cannot create a request
 *   **Given** I am signed in as an admin
-*   **When** I send `POST /vehicle/requests` with a valid body
+*   **When** I send `POST /vehicle-t2/requests` with a valid body
 *   **Then** the API returns `403` with `{ "message": "You do not have permission for this action." }`
 
 ### US-4.2 — Validation errors on invalid request
@@ -373,7 +373,7 @@ DB columns are snake_case; API/JSON uses camelCase via Sequelize `underscored: t
 
 #### Scenario: Invalid area or vehicle type
 *   **Given** I am signed in as a requestor
-*   **When** I submit a request with an unknown or inactive `areaId`, or an unknown `vehicleTypeId`
+*   **When** I submit a request with an unknown or inactive `areaId`, or an unknown or inactive (`isActive` false) `vehicleTypeId`
 *   **Then** the API returns `400` with `{ "message": "Invalid area or vehicle type." }`
 
 ### US-4.3 — List my requests
@@ -381,7 +381,7 @@ DB columns are snake_case; API/JSON uses camelCase via Sequelize `underscored: t
 #### Scenario: Requestor sees own requests newest first
 *   **Given** I am signed in as a requestor
 *   **And** I have two requests created at different times
-*   **When** I open **My Requests** (or `GET /vehicle/requests`)
+*   **When** I open **My Requests** (or `GET /vehicle-t2/requests`)
 *   **Then** I see only my requests
 *   **And** they are ordered newest first by `createdAt`
 *   **And** each row includes a `status` of pending, approved, denied, cancelled, or completed
@@ -450,19 +450,19 @@ DB columns are snake_case; API/JSON uses camelCase via Sequelize `underscored: t
 #### Scenario: Requestor cannot list another user’s requests
 *   **Given** requestor A and requestor B both have requests
 *   **And** I am signed in as requestor A
-*   **When** I `GET /vehicle/requests`
+*   **When** I `GET /vehicle-t2/requests`
 *   **Then** the response includes only requestor A’s requests
 
 #### Scenario: Requestor cannot open another user’s request by id
 *   **Given** requestor B owns request id `99`
 *   **And** I am signed in as requestor A
-*   **When** I `GET /vehicle/requests/99`
+*   **When** I `GET /vehicle-t2/requests/99`
 *   **Then** the API returns `404` with `{ "message": "Request not found." }`
 
 #### Scenario: Requestor cannot update or cancel another user’s request
 *   **Given** requestor B owns request id `99`
 *   **And** I am signed in as requestor A
-*   **When** I `PUT /vehicle/requests/99` or `POST /vehicle/requests/99/cancel`
+*   **When** I `PUT /vehicle-t2/requests/99` or `POST /vehicle-t2/requests/99/cancel`
 *   **Then** the API returns `404` with `{ "message": "Request not found." }`
 
 ---
@@ -503,13 +503,15 @@ Copy when asking Cursor to implement this feature (`@` this file):
 ```text
 Implement Feature 4 from @features/feature-4-making-and-tracking-requests.md on branch `feature/4-making-and-tracking-requests`.
 
+Prerequisites on `dev`: Feature 1 (auth/roles/MenuBar), Feature 2 (areas + GET /vehicle-t2/areas), and Feature 3 minimum (`vehicle_types` + GET /vehicle-t2/vehicle-types).
+
 Follow layer order in @features/framework.md (models → routes → backend tests → frontend → frontend tests).
 Map every Gherkin scenario in the Test Coverage Map; run `npm test` before finishing.
 If API routes, payloads, schema, or product rules changed per this spec, update @features/reference/api.md, @features/reference/data-model.md, and/or @features/reference/behavior.md in the same PR to match shipped code.
 Complete Definition of Done and the merge checklist in @features/framework.md.
 Do not implement behavior not in this spec.
 Do not implement Feature 5 review writes or assignment/trip-log creation.
-Wait for Feature 3 vehicle-type list contract before wiring the vehicle-type dropdown; validate vehicleTypeId per FR-009.
+Consume Feature 3’s GET /vehicle-t2/vehicle-types for the form dropdown; do not create or edit vehicle_types. Validate vehicleTypeId per FR-009 (exists and isActive).
 ```
 
 **Reference updates for this feature:** `features/reference/api.md`, `features/reference/data-model.md`, `features/reference/behavior.md`
@@ -525,7 +527,8 @@ Wait for Feature 3 vehicle-type list contract before wiring the vehicle-type dro
 *   [ ] `features/reference/data-model.md` updated (schema)
 *   [ ] `features/reference/api.md` updated (routes/payloads)
 *   [ ] `features/reference/behavior.md` updated (ownership, validation, cancel rules)
-*   [ ] Feature 3 vehicle-type list contract reconciled into this spec (dropdown endpoint + Status `Ready`) before or with implementation
+*   [x] Feature 3 vehicle-type list contract reconciled into this spec (`GET /vehicle-t2/vehicle-types`, usable = `isActive`, Status `Ready`)
+*   [ ] Product implementation only after Features 1–2 and Feature 3 types exist on `dev`
 
 ---
 
@@ -533,7 +536,7 @@ Wait for Feature 3 vehicle-type list contract before wiring the vehicle-type dro
 
 *   Admin / area_admin review queue and writing `reviewedBy` / `reviewedAt` / `reviewNotes` / approve / deny (Feature 5)
 *   Creating or editing `vehicle_assignments`, `trip_logs`, or vehicle inventory
-*   Defining Feature 3 vehicle-type APIs (teammate; this feature only depends on them)
+*   Creating or editing `vehicle_types` or other Feature 3 fleet APIs (consume `GET /vehicle-t2/vehicle-types` only)
 *   Setting status to `approved`, `denied`, or `completed` (except displaying those values when set elsewhere)
 *   Requestor browsing or managing other users’ requests
 *   Notifications / email on status change
