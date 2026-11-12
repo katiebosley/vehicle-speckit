@@ -4,8 +4,11 @@ import db from "../app/models/index.js";
 
 const User = db.user;
 const Session = db.session;
+const Area = db.area;
+const AreaAdmin = db.areaAdmin;
 const VehicleType = db.vehicleType;
 const Vehicle = db.vehicle;
+const VehicleUnavailability = db.vehicleUnavailability;
 
 async function signIn(role, email) {
   const user = await User.create({
@@ -39,14 +42,13 @@ describe("Feature 3 — Fleet Management", () => {
   });
 
   beforeEach(async () => {
+    await VehicleUnavailability.destroy({ where: {} });
     await Vehicle.destroy({ where: {} });
     await VehicleType.destroy({ where: {} });
+    await AreaAdmin.destroy({ where: {} });
+    await Area.destroy({ where: {} });
     await Session.destroy({ where: {} });
     await User.destroy({ where: {} });
-  });
-
-  afterAll(async () => {
-    await db.sequelize.close();
   });
 
   describe("US-3.1 — Add, edit, and deactivate vehicle types", () => {
@@ -133,8 +135,9 @@ describe("Feature 3 — Fleet Management", () => {
     it("Admin cannot deactivate a vehicle type that is still in use", async () => {
       const token = await signIn("admin", "admin-inuse@oc.edu");
       const type = await createType({ name: "Van", isActive: true });
+      const area = await Area.create({ name: "Athletics", isActive: true });
       await Vehicle.create({
-        areaId: 1,
+        areaId: area.id,
         vehicleTypeId: type.id,
         make: "Ford",
         model: "Transit",

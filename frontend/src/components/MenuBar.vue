@@ -11,6 +11,7 @@ const user = computed(() => Utils.getStore("user"));
     <template v-if="user" #append>
       <span class="mr-4">{{ user.firstName }}</span>
       <v-btn v-if="user.role === 'admin'" to="/vehicle-types" variant="text">Vehicle Types</v-btn>
+      <v-btn v-if="user.role === 'admin' || user.role === 'area_admin'" to="/fleet" variant="text">Fleet</v-btn>
     </template>
   </v-app-bar>
 </template>

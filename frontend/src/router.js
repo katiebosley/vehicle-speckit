@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Home from "./views/Home.vue";
 import VehicleTypes from "./views/VehicleTypes.vue";
+import Fleet from "./views/Fleet.vue";
 import Utils from "./config/utils.js";
 
 const router = createRouter({
@@ -16,6 +17,12 @@ const router = createRouter({
       name: "vehicle-types",
       component: VehicleTypes,
       meta: { roles: ["admin"] },
+    },
+    {
+      path: "/fleet",
+      name: "fleet",
+      component: Fleet,
+      meta: { roles: ["admin", "area_admin"] },
     },
     {
       path: "/:pathMatch(.*)*",
