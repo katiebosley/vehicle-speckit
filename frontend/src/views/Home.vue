@@ -1,11 +1,13 @@
 <script setup>
+import Utils from "../config/utils.js";
+import { roleLabel } from "../utils/roles.js";
+
+const user = Utils.getStore("user");
 </script>
 
 <template>
   <v-container class="py-10">
-    <h1 class="text-h4 mb-2">OC Vehicle Scheduling</h1>
-    <p class="text-body-1">
-      Starter shell — add <code>features/feature-1-….md</code>, then implement with Cursor.
-    </p>
+    <h1 class="text-h4 mb-2">Welcome, {{ user?.firstName }}</h1>
+    <p class="text-body-1">{{ roleLabel(user?.role) }}</p>
   </v-container>
 </template>
