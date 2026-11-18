@@ -1,7 +1,8 @@
 import db from "../models/index.js";
 
-const Area = db.area;
-const AreaAdmin = db.areaAdmin;
+export function parsePositiveInt(value) {
+  return typeof value === "string" && /^\d+$/.test(value) ? parseInt(value, 10) : null;
+}
 
 export async function getManagedAreaIds(user) {
   if (!user) {
@@ -9,12 +10,12 @@ export async function getManagedAreaIds(user) {
   }
 
   if (user.role === "admin") {
-    const areas = await Area.findAll({ attributes: ["id"] });
+    const areas = await db.area.findAll({ attributes: ["id"] });
     return areas.map((area) => area.id);
   }
 
   if (user.role === "area_admin") {
-    const rows = await AreaAdmin.findAll({
+    const rows = await db.areaAdmin.findAll({
       where: { userId: user.id },
       attributes: ["areaId"],
     });
@@ -22,4 +23,22 @@ export async function getManagedAreaIds(user) {
   }
 
   return [];
+}
+
+export async function requireAreaAccess(req, res, next) {
+  const areaId = parsePositiveInt(req.params.areaId);
+  if (areaId == null) {
+    return res.status(404).send({ message: `Area with id=${req.params.areaId} not found.` });
+  }
+
+  if (req.user?.role === "admin") {
+    return next();
+  }
+
+  const managedIds = await getManagedAreaIds(req.user);
+  if (managedIds.includes(areaId)) {
+    return next();
+  }
+
+  return res.status(403).send({ message: "You do not manage this area." });
 }

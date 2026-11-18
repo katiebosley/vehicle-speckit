@@ -6,6 +6,8 @@ import Users from "./views/Users.vue";
 import Profile from "./views/Profile.vue";
 import VehicleTypes from "./views/VehicleTypes.vue";
 import Fleet from "./views/Fleet.vue";
+import Areas from "./views/Areas.vue";
+import MyAreas from "./views/MyAreas.vue";
 import MyRequests from "./views/MyRequests.vue";
 import RequestNew from "./views/RequestNew.vue";
 import RequestDetail from "./views/RequestDetail.vue";
@@ -32,6 +34,18 @@ export const routes = [
     path: "/profile",
     name: "profile",
     component: Profile,
+  },
+  {
+    path: "/areas",
+    name: "areas",
+    component: Areas,
+    meta: { roles: ["admin"] },
+  },
+  {
+    path: "/my-areas",
+    name: "my-areas",
+    component: MyAreas,
+    meta: { roles: ["area_admin"] },
   },
   {
     path: "/vehicle-types",

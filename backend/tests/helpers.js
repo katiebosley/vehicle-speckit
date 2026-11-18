@@ -32,6 +32,18 @@ export const createSession = async (user, { expired = false } = {}) => {
   return token;
 };
 
+let areaCount = 0;
+
+export const createArea = async (overrides = {}) => {
+  areaCount += 1;
+  return db.area.create({
+    name: `Area ${areaCount}`,
+    description: null,
+    isActive: true,
+    ...overrides,
+  });
+};
+
 export const signInAs = async (role = "requestor", overrides = {}) => {
   const user = await createUser({ role, ...overrides });
   const token = await createSession(user);

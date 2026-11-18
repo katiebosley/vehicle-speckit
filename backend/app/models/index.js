@@ -30,12 +30,14 @@ db.user.belongsToMany(db.area, {
   foreignKey: "userId",
   otherKey: "areaId",
   as: "managedAreas",
+  onDelete: "CASCADE",
 });
 db.area.belongsToMany(db.user, {
   through: db.areaAdmin,
   foreignKey: "areaId",
   otherKey: "userId",
   as: "admins",
+  onDelete: "CASCADE",
 });
 
 db.area.hasMany(db.vehicle, { foreignKey: "areaId" });

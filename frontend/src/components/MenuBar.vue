@@ -7,6 +7,8 @@ import authServices from "../services/authServices.js";
 const NAV_ITEMS = [
   { title: "My Requests", name: "my-requests", roles: ["requestor"] },
   { title: "Users", name: "users", roles: ["admin"] },
+  { title: "Areas", name: "areas", roles: ["admin"] },
+  { title: "My Areas", name: "my-areas", roles: ["area_admin"] },
   { title: "Profile", name: "profile" },
   { title: "Vehicle Types", name: "vehicle-types", roles: ["admin"] },
   { title: "Fleet", name: "fleet", roles: ["admin", "area_admin"] },

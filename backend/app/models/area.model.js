@@ -2,6 +2,11 @@ export default (sequelize, Sequelize) => {
   const Area = sequelize.define(
     "area",
     {
+      id: {
+        type: Sequelize.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+      },
       name: {
         type: Sequelize.STRING(100),
         allowNull: false,

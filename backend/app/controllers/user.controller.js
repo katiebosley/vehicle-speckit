@@ -109,7 +109,12 @@ exports.update = async (req, res) => {
     if (isApprovedDriver !== undefined) changes.isApprovedDriver = isApprovedDriver;
     if (licenseExpiration !== undefined) changes.licenseExpiration = licenseExpiration || null;
 
-    await user.update(changes);
+    await db.sequelize.transaction(async (transaction) => {
+      if (user.role === "area_admin" && changes.role && changes.role !== "area_admin") {
+        await db.areaAdmin.destroy({ where: { userId: user.id }, transaction });
+      }
+      await user.update(changes, { transaction });
+    });
     return res.send(user);
   } catch (err) {
     logger.error(`users.update failed: ${err.message}`);

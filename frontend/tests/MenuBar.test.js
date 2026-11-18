@@ -27,6 +27,8 @@ async function mountMenuBar(path = "/") {
       { path: "/login", name: "login", component: Blank },
       { path: "/users", name: "users", component: Blank },
       { path: "/profile", name: "profile", component: Blank },
+      { path: "/areas", name: "areas", component: Blank },
+      { path: "/my-areas", name: "my-areas", component: Blank },
       { path: "/vehicle-types", name: "vehicle-types", component: Blank },
       { path: "/fleet", name: "fleet", component: Blank },
       { path: "/my-requests", name: "my-requests", component: Blank },
@@ -130,7 +132,7 @@ describe("Feature 1 — Sign-in, Roles & User Management", () => {
       signInAs("admin");
       const { wrapper } = await mountMenuBar("/");
 
-      expect(labels(wrapper)).toEqual(["Users", "Profile", "Vehicle Types", "Fleet", "Sign out"]);
+      expect(labels(wrapper)).toEqual(["Users", "Areas", "Profile", "Vehicle Types", "Fleet", "Sign out"]);
     });
   });
 
@@ -164,6 +166,47 @@ describe("Feature 1 — Sign-in, Roles & User Management", () => {
       await flushPromises();
 
       expect(wrapper.find("[data-test='user-name']").text()).toBe("Janet Doe");
+    });
+  });
+});
+
+describe("Feature 2 — Areas, Area Admins & Deployment", () => {
+  describe("US-2.1 — Add, edit and deactivate areas", () => {
+    it("Menu Selection", async () => {
+      signInAs("admin");
+      const { wrapper, router } = await mountMenuBar("/");
+
+      await clickButton(wrapper, "Areas");
+
+      expect(router.currentRoute.value.name).toBe("areas");
+    });
+  });
+
+  describe("US-2.4 — See the areas I manage", () => {
+    it("Area admin opens My Areas", async () => {
+      signInAs("area_admin");
+      const { wrapper, router } = await mountMenuBar("/");
+
+      await clickButton(wrapper, "My Areas");
+
+      expect(router.currentRoute.value.name).toBe("my-areas");
+    });
+
+    it("Role-based area menu items", async () => {
+      signInAs("requestor");
+      const requestor = await mountMenuBar("/");
+      expect(labels(requestor.wrapper)).not.toContain("Areas");
+      expect(labels(requestor.wrapper)).not.toContain("My Areas");
+
+      signInAs("area_admin");
+      const areaAdmin = await mountMenuBar("/");
+      expect(labels(areaAdmin.wrapper)).toContain("My Areas");
+      expect(labels(areaAdmin.wrapper)).not.toContain("Areas");
+
+      signInAs("admin");
+      const admin = await mountMenuBar("/");
+      expect(labels(admin.wrapper)).toContain("Areas");
+      expect(labels(admin.wrapper)).not.toContain("My Areas");
     });
   });
 });

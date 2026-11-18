@@ -1,6 +1,6 @@
 # Data Model Reference
 
-**Status:** Feature 1 (`users`, `sessions`), Feature 3 (`vehicle_types`, `areas`, `area_admins`, `vehicles`, `vehicle_unavailability`), and Feature 4 (`requests`).
+**Status:** Feature 1 (`users`, `sessions`), Feature 2 (`areas`, `area_admins`), Feature 3 (`vehicle_types`, `vehicles`, `vehicle_unavailability`), and Feature 4 (`requests`).
 
 Update this file when a feature that defines schema merges to `dev`.
 
@@ -47,6 +47,31 @@ Model: `backend/app/models/user.model.js`. `defaultScope` excludes `google_id`; 
 
 Model: `backend/app/models/session.model.js`.
 
+### `areas` — Feature 2
+
+| Column        | Type        | Rules                                              |
+| ------------- | ----------- | -------------------------------------------------- |
+| `id`          | INTEGER PK  | Auto-increment                                     |
+| `name`        | STRING(100) | Required, trimmed, unique. API also rejects another casing of an existing name. |
+| `description` | TEXT        | Optional                                           |
+| `is_active`   | BOOLEAN     | Default `true`                                     |
+| `created_at`  | DATE        | Sequelize timestamps                               |
+| `updated_at`  | DATE        | Sequelize timestamps                               |
+
+Model: `backend/app/models/area.model.js`.
+
+### `area_admins` — Feature 2
+
+| Column        | Type           | Rules                                      |
+| ------------- | -------------- | ------------------------------------------ |
+| `user_id`     | INTEGER PK, FK | References `users.id`, `ON DELETE CASCADE` |
+| `area_id`     | INTEGER PK, FK | References `areas.id`, `ON DELETE CASCADE` |
+| `assigned_at` | DATE           | Required; defaults to now                  |
+
+Composite primary key (`user_id`, `area_id`). No `created_at` / `updated_at`.
+
+Model: `backend/app/models/areaAdmin.model.js`.
+
 ### `vehicle_types`
 
 | Column | Notes |
@@ -55,10 +80,6 @@ Model: `backend/app/models/session.model.js`.
 | `description` | Optional |
 | `default_passenger_capacity` | Optional integer 1–30 |
 | `is_active` | Default `true` |
-
-### `areas` / `area_admins`
-
-Area name, description, and `is_active`. `area_admins` pairs a user with an area. Feature 2 owns writing these rows. This branch reads them through `getManagedAreaIds`.
 
 ### `vehicles`
 
@@ -97,7 +118,8 @@ Defined in `backend/app/models/index.js`:
 
 - `User hasMany Session` (`userId`, cascade delete)
 - `Session belongsTo User` (`userId`, alias `user`)
-- `User` belongsToMany `Area` through `AreaAdmin` (alias `managedAreas` / `admins`)
+- `User` belongsToMany `Area` through `area_admins` (`userId`, alias `managedAreas`, cascade delete)
+- `Area` belongsToMany `User` through `area_admins` (`areaId`, alias `admins`, cascade delete)
 - `Area` hasMany `Vehicle`
 - `Vehicle` belongsTo `Area` and `VehicleType`
 - `Vehicle` hasMany `VehicleUnavailability`

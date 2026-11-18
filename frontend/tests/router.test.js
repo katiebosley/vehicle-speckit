@@ -72,3 +72,16 @@ describe("Feature 1 — Sign-in, Roles & User Management", () => {
     });
   });
 });
+
+describe("Feature 2 — Areas, Area Admins & Deployment", () => {
+  describe("US-2.5 — Only see data for my areas", () => {
+    it("Area admin navigates to the admin areas route", async () => {
+      signInAs("area_admin");
+      const router = freshRouter();
+
+      await router.push("/areas");
+
+      expect(router.currentRoute.value.name).toBe("home");
+    });
+  });
+});
