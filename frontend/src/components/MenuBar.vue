@@ -7,6 +7,8 @@ import authServices from "../services/authServices.js";
 const NAV_ITEMS = [
   { title: "Users", name: "users", roles: ["admin"] },
   { title: "Profile", name: "profile" },
+  { title: "Vehicle Types", name: "vehicle-types", roles: ["admin"] },
+  { title: "Fleet", name: "fleet", roles: ["admin", "area_admin"] },
 ];
 
 const route = useRoute();

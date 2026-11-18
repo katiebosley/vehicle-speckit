@@ -27,6 +27,8 @@ async function mountMenuBar(path = "/") {
       { path: "/login", name: "login", component: Blank },
       { path: "/users", name: "users", component: Blank },
       { path: "/profile", name: "profile", component: Blank },
+      { path: "/vehicle-types", name: "vehicle-types", component: Blank },
+      { path: "/fleet", name: "fleet", component: Blank },
     ],
   });
   await router.push(path);
@@ -127,7 +129,7 @@ describe("Feature 1 — Sign-in, Roles & User Management", () => {
       signInAs("admin");
       const { wrapper } = await mountMenuBar("/");
 
-      expect(labels(wrapper)).toEqual(["Users", "Profile", "Sign out"]);
+      expect(labels(wrapper)).toEqual(["Users", "Profile", "Vehicle Types", "Fleet", "Sign out"]);
     });
   });
 

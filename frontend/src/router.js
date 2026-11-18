@@ -4,6 +4,8 @@ import Home from "./views/Home.vue";
 import Login from "./views/Login.vue";
 import Users from "./views/Users.vue";
 import Profile from "./views/Profile.vue";
+import VehicleTypes from "./views/VehicleTypes.vue";
+import Fleet from "./views/Fleet.vue";
 
 export const routes = [
   {
@@ -26,6 +28,18 @@ export const routes = [
     path: "/profile",
     name: "profile",
     component: Profile,
+  },
+  {
+    path: "/vehicle-types",
+    name: "vehicle-types",
+    component: VehicleTypes,
+    meta: { roles: ["admin"] },
+  },
+  {
+    path: "/fleet",
+    name: "fleet",
+    component: Fleet,
+    meta: { roles: ["admin", "area_admin"] },
   },
   {
     path: "/:pathMatch(.*)*",

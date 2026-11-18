@@ -1,6 +1,6 @@
 # Data Model Reference
 
-**Status:** Feature 1 (`users`, `sessions`) on `dev`.
+**Status:** Feature 1 (`users`, `sessions`) and Feature 3 (`vehicle_types`, `areas`, `area_admins`, `vehicles`, `vehicle_unavailability`).
 
 Update this file when a feature that defines schema merges to `dev`.
 
@@ -47,9 +47,36 @@ Model: `backend/app/models/user.model.js`. `defaultScope` excludes `google_id`; 
 
 Model: `backend/app/models/session.model.js`.
 
+### `vehicle_types`
+
+| Column | Notes |
+|--------|--------|
+| `name` | Required, unique, compared case-insensitively |
+| `description` | Optional |
+| `default_passenger_capacity` | Optional integer 1–30 |
+| `is_active` | Default `true` |
+
+### `areas` / `area_admins`
+
+Area name, description, and `is_active`. `area_admins` pairs a user with an area. Feature 2 owns writing these rows. This branch reads them through `getManagedAreaIds`.
+
+### `vehicles`
+
+One vehicle belongs to one area and one vehicle type. `status` is `available`, `maintenance`, or `retired`. `displayName` is computed: the name when it is set, otherwise year, make, and model.
+
+### `vehicle_unavailability`
+
+A dated block on one vehicle: `starts_at`, `ends_at`, `reason`, and `created_by`. It does not change `status`.
+
 ## Associations
 
 Defined in `backend/app/models/index.js`:
 
-- `User hasMany Session` (`userId`)
+- `User hasMany Session` (`userId`, cascade delete)
 - `Session belongsTo User` (`userId`, alias `user`)
+- `User` belongsToMany `Area` through `AreaAdmin` (alias `managedAreas` / `admins`)
+- `Area` hasMany `Vehicle`
+- `Vehicle` belongsTo `Area` and `VehicleType`
+- `Vehicle` hasMany `VehicleUnavailability`
+- `VehicleUnavailability` belongsTo `Vehicle`
+- `VehicleUnavailability` belongsTo `User` (`createdBy`)
