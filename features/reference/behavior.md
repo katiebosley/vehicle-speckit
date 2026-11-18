@@ -89,6 +89,7 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | Users read/write only their own profile | `profile.controller.js` uses `req.user.id` | FR-015 |
 | Editable: first name, last name (required, ≤100), phone (optional, ≤20); other fields ignored | `profile.controller.js`, `Profile.vue` | FR-015 |
 | Saving updates the stored `user` name so `MenuBar` shows it | `Profile.vue` `user-changed` event | US-1.8 |
+| Testing override: `PUT /profile/test-role` sets own role to `admin` or `requestor` only; leaves `area_admin` clears `area_admins`; Profile **Admin** toggle updates store + Role field | `profile.controller.js` `updateTestRole`, `Profile.vue` | Feature 4 FR-019 |
 
 ## Areas — Feature 2
 

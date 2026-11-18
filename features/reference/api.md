@@ -15,6 +15,7 @@ API mount path is `/vehicle-t2` (see `backend/server.js`). The feature spec writ
 | `PUT`  | `/vehicle-t2/users/:userId` | Yes, admin | Change `role`, `isApprovedDriver`, `licenseExpiration`, `isActive` | 1 |
 | `GET`  | `/vehicle-t2/profile`       | Yes        | Fetch the signed-in user                                   | 1       |
 | `PUT`  | `/vehicle-t2/profile`       | Yes        | Update own `firstName`, `lastName`, `phone`                | 1       |
+| `PUT`  | `/vehicle-t2/profile/test-role` | Yes   | Testing: set own `role` to `admin` or `requestor`          | 4       |
 | `GET`  | `/vehicle-t2/areas`         | Yes        | List areas. Admin: all. Other roles: active only. Ordered by name. | 2 |
 | `GET`  | `/vehicle-t2/areas/mine`    | Yes, admin / area admin | Areas the user manages, including inactive | 2 |
 | `GET`  | `/vehicle-t2/areas/:areaId` | Yes, admin / area admin | One area. Area admins only for an area they manage. | 2 |
@@ -79,6 +80,7 @@ Success `200`:
 | `404`  | `User with id=<id> not found.`                           | `GET`/`PUT /users/:userId`, `POST /areas/:areaId/admins` |
 | `400`  | `First name is required.` / `Last name is required.`     | `PUT /profile`           |
 | `400`  | `Phone must be 20 characters or fewer.`                  | `PUT /profile`           |
+| `400`  | `Role must be admin or requestor.`                       | `PUT /profile/test-role` |
 | `400`  | `Area name is required.`                                 | `POST`/`PUT /areas`      |
 | `400`  | `Area name must be 100 characters or fewer.`             | `POST`/`PUT /areas`      |
 | `400`  | `Area name is already taken.`                            | `POST`/`PUT /areas`      |

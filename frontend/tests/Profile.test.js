@@ -1,12 +1,14 @@
 /**
  * Feature 1 — Sign-in, Roles & User Management
  * Spec: features/feature-1-google-auth-user-management.md
+ * Feature 4 — Making and Tracking Requests (US-4.8)
+ * Spec: features/feature-4-making-and-tracking-requests.md
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { flushPromises } from "@vue/test-utils";
 
 vi.mock("../src/services/profileServices.js", () => ({
-  default: { getProfile: vi.fn(), updateProfile: vi.fn() },
+  default: { getProfile: vi.fn(), updateProfile: vi.fn(), updateTestRole: vi.fn() },
 }));
 
 import profileServices from "../src/services/profileServices.js";
@@ -26,8 +28,8 @@ const PROFILE = {
   isActive: true,
 };
 
-async function mountProfile() {
-  profileServices.getProfile.mockResolvedValue({ data: PROFILE });
+async function mountProfile(profile = PROFILE) {
+  profileServices.getProfile.mockResolvedValue({ data: profile });
   const { wrapper } = await mountWithPlugins(Profile);
   await flushPromises();
   return wrapper;
@@ -69,6 +71,7 @@ describe("Feature 1 — Sign-in, Roles & User Management", () => {
       expect(input(wrapper, "email").attributes("readonly")).toBeDefined();
       expect(input(wrapper, "role").attributes("readonly")).toBeDefined();
       expect(input(wrapper, "first-name").attributes("readonly")).toBeUndefined();
+      expect(wrapper.find("[data-test='admin-toggle']").exists()).toBe(true);
     });
 
     it("User updates their name and phone", async () => {
@@ -124,6 +127,49 @@ describe("Feature 1 — Sign-in, Roles & User Management", () => {
 
       expect(wrapper.find(".v-alert").text()).toContain("First name is required.");
       expect(Utils.getStore("user").firstName).toBe("Jane");
+    });
+  });
+});
+
+describe("Feature 4 — Making and Tracking Requests", () => {
+  describe("US-4.8 — Toggle admin role for testing", () => {
+    it("Requestor switches to admin via profile toggle", async () => {
+      const wrapper = await mountProfile();
+      profileServices.updateTestRole.mockResolvedValue({
+        data: { ...PROFILE, role: "admin" },
+      });
+      const userChanged = vi.fn();
+      window.addEventListener("user-changed", userChanged);
+
+      await input(wrapper, "admin-toggle").setValue(true);
+      await flushPromises();
+
+      window.removeEventListener("user-changed", userChanged);
+      expect(profileServices.updateTestRole).toHaveBeenCalledWith({ role: "admin" });
+      expect(input(wrapper, "role").element.value).toBe("Admin");
+      expect(Utils.getStore("user").role).toBe("admin");
+      expect(userChanged).toHaveBeenCalled();
+    });
+
+    it("Admin switches to requestor via profile toggle", async () => {
+      Utils.setStore("user", {
+        userId: 7,
+        firstName: "Jane",
+        lastName: "Doe",
+        role: "admin",
+        token: "session-token",
+      });
+      const wrapper = await mountProfile({ ...PROFILE, role: "admin" });
+      profileServices.updateTestRole.mockResolvedValue({
+        data: { ...PROFILE, role: "requestor" },
+      });
+
+      await input(wrapper, "admin-toggle").setValue(false);
+      await flushPromises();
+
+      expect(profileServices.updateTestRole).toHaveBeenCalledWith({ role: "requestor" });
+      expect(input(wrapper, "role").element.value).toBe("Requestor");
+      expect(Utils.getStore("user").role).toBe("requestor");
     });
   });
 });

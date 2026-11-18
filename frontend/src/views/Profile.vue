@@ -8,6 +8,8 @@ const formRef = ref(null);
 const profile = ref(null);
 const loading = ref(false);
 const saving = ref(false);
+const roleSaving = ref(false);
+const adminOn = ref(false);
 const error = ref("");
 const success = ref("");
 const form = reactive({ firstName: "", lastName: "", phone: "" });
@@ -25,6 +27,7 @@ function fillForm(data) {
   form.firstName = data.firstName;
   form.lastName = data.lastName;
   form.phone = data.phone ?? "";
+  adminOn.value = data.role === "admin";
 }
 
 onMounted(async () => {
@@ -67,6 +70,31 @@ async function save() {
     error.value = err.response?.data?.message || "Could not save profile.";
   } finally {
     saving.value = false;
+  }
+}
+
+async function setTestRole(isAdmin) {
+  const previous = adminOn.value;
+  adminOn.value = isAdmin;
+  roleSaving.value = true;
+  error.value = "";
+  success.value = "";
+
+  try {
+    const res = await profileServices.updateTestRole({
+      role: isAdmin ? "admin" : "requestor",
+    });
+    fillForm(res.data);
+    Utils.setStore("user", {
+      ...Utils.getStore("user"),
+      role: res.data.role,
+    });
+    window.dispatchEvent(new CustomEvent("user-changed"));
+  } catch (err) {
+    adminOn.value = previous;
+    error.value = err.response?.data?.message || "Could not update role.";
+  } finally {
+    roleSaving.value = false;
   }
 }
 </script>
@@ -128,16 +156,28 @@ async function save() {
           </v-col>
         </v-row>
 
-        <v-btn
-          type="submit"
-          color="primary"
-          variant="elevated"
-          class="oc-cta"
-          :loading="saving"
-          data-test="save-profile"
-        >
-          Save
-        </v-btn>
+        <div class="d-flex align-center justify-space-between flex-wrap ga-4">
+          <v-btn
+            type="submit"
+            color="primary"
+            variant="elevated"
+            class="oc-cta"
+            :loading="saving"
+            data-test="save-profile"
+          >
+            Save
+          </v-btn>
+          <v-switch
+            :model-value="adminOn"
+            label="Admin"
+            color="primary"
+            hide-details
+            :loading="roleSaving"
+            :disabled="roleSaving"
+            data-test="admin-toggle"
+            @update:model-value="setTestRole"
+          />
+        </div>
       </v-form>
     </v-card>
   </v-container>

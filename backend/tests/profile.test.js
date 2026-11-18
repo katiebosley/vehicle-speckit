@@ -1,6 +1,8 @@
 /**
  * Feature 1 — Sign-in, Roles & User Management
  * Spec: features/feature-1-google-auth-user-management.md
+ * Feature 4 — Making and Tracking Requests (US-4.8 test-role)
+ * Spec: features/feature-4-making-and-tracking-requests.md
  */
 import request from "supertest";
 import app from "../server.js";
@@ -88,6 +90,70 @@ describe("Feature 1 — Sign-in, Roles & User Management", () => {
         .set(auth)
         .send({ firstName: "J".repeat(101), lastName: "Doe" });
       expect(longName.status).toBe(400);
+    });
+  });
+});
+
+describe("Feature 4 — Making and Tracking Requests", () => {
+  describe("US-4.8 — Toggle admin role for testing", () => {
+    it("Requestor switches to admin via profile toggle", async () => {
+      const { user, auth } = await signInAs("requestor");
+
+      const res = await request(app)
+        .put(`${API}/profile/test-role`)
+        .set(auth)
+        .send({ role: "admin" });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ id: user.id, role: "admin" });
+      expect(res.body).not.toHaveProperty("googleId");
+      expect((await db.user.findByPk(user.id)).role).toBe("admin");
+    });
+
+    it("Admin switches to requestor via profile toggle", async () => {
+      const { user, auth } = await signInAs("admin");
+
+      const res = await request(app)
+        .put(`${API}/profile/test-role`)
+        .set(auth)
+        .send({ role: "requestor" });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ id: user.id, role: "requestor" });
+      expect((await db.user.findByPk(user.id)).role).toBe("requestor");
+    });
+
+    it("Test-role rejects area_admin", async () => {
+      const { user, auth } = await signInAs("requestor");
+
+      const res = await request(app)
+        .put(`${API}/profile/test-role`)
+        .set(auth)
+        .send({ role: "area_admin" });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({ message: "Role must be admin or requestor." });
+      expect((await db.user.findByPk(user.id)).role).toBe("requestor");
+    });
+
+    it("Leaving area_admin via test-role clears area assignments", async () => {
+      const { user, auth } = await signInAs("area_admin", { firstName: "Alex", lastName: "Reed" });
+      const area = await db.area.create({
+        name: "Athletics",
+        description: null,
+        isActive: true,
+      });
+      await db.areaAdmin.create({ userId: user.id, areaId: area.id, assignedAt: new Date() });
+      expect(await db.areaAdmin.count({ where: { userId: user.id } })).toBe(1);
+
+      const res = await request(app)
+        .put(`${API}/profile/test-role`)
+        .set(auth)
+        .send({ role: "requestor" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.role).toBe("requestor");
+      expect(await db.areaAdmin.count({ where: { userId: user.id } })).toBe(0);
     });
   });
 });

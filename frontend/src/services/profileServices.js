@@ -7,4 +7,7 @@ export default {
   updateProfile(data) {
     return apiClient.put("profile", data);
   },
+  updateTestRole(data) {
+    return apiClient.put("profile/test-role", data);
+  },
 };

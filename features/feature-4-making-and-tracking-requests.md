@@ -77,6 +77,15 @@
 **Independent test:** List never includes another user’s id; `GET`/`PUT`/cancel of another user’s request id returns `404`
 **Acceptance scenarios:** see ### US-4.7 under Acceptance Criteria
 
+### US-4.8: Toggle admin role for testing
+**As a** signed-in user
+**I want to** switch my account between `admin` and `requestor` from My Profile
+**So that** I can exercise admin and requestor flows without a separate account or promote-admin script
+
+**Priority:** P2
+**Independent test:** Authenticated `PUT /vehicle-t2/profile/test-role` with `{ "role": "admin" }` persists `role` on the caller’s user row and returns the updated user; UI toggle updates `localStorage` `user.role` and the Role field
+**Acceptance scenarios:** see ### US-4.8 under Acceptance Criteria
+
 ---
 
 ## Requirements
@@ -101,6 +110,7 @@
 - **FR-016**: This feature MUST NOT write `reviewedBy`, `reviewedAt`, or `reviewNotes` (Feature 5 owns those writes). This feature MUST NOT create or edit vehicle assignments or trip logs.
 - **FR-017**: UI MUST show only data returned for the signed-in requestor (list and detail from this feature’s APIs).
 - **FR-018**: `MenuBar` MUST add **My Requests** for role `requestor` (path `/my-requests`). This feature MUST NOT create a second `MenuBar` (extend Feature 1’s shell like Feature 2 does for **Areas** / **My Areas**).
+- **FR-019**: System MUST provide `PUT /vehicle-t2/profile/test-role` (session required; any role) that sets the signed-in user’s `role` to only `"admin"` or `"requestor"` from the body `{ "role": "admin" | "requestor" }`. Success `200` returns the updated user object (same shape as `GET /profile`). Invalid or missing `role` → `400` with `{ "message": "Role must be admin or requestor." }`. Unauthenticated → `401`. This endpoint MUST update the `users.role` column for `req.user.id` so subsequent `authenticate` and client menus use the new role. When leaving `area_admin`, the update MUST delete that user’s `area_admins` rows in the same transaction (Feature 2 FR-009 pattern). Feature 1’s `PUT /profile` MUST continue to ignore `role` in the body (FR-015 unchanged). The Profile screen MUST show an always-visible **Admin** toggle switch (bottom-right of the profile card, opposite **Save**): on → `admin`, off → `requestor`; after success, update the displayed Role field, `localStorage` `user.role`, and dispatch `user-changed`.
 
 ---
 
@@ -115,6 +125,7 @@
 - `assignments` on detail may stay empty until a later fulfillment feature persists assignment rows. Feature 4 still defines the response shape.
 - “Hasn’t started yet” for cancel means: approved and `departureAt` is still in the future (no trip-log dependency in this feature).
 - Admins and area admins use Feature 5 for review queues — not this requestor UI.
+- FR-019 is an intentional testing override of Feature 1’s self-role lockout for `PUT /users/:userId` (FR-013) and of profile’s ignore-`role` rule for the dedicated `test-role` path only — not for `PUT /profile`.
 
 ## Edge Cases
 
@@ -129,6 +140,9 @@
 - Unauthenticated → `401`
 - Authenticated non-`requestor` → `403` `"You do not have permission for this action."`
 - Empty my-requests list → empty array / empty-state copy (see Screen Requirements)
+- `PUT /profile/test-role` with role other than `admin`/`requestor` (including `area_admin`) → `400` `"Role must be admin or requestor."`
+- Area admin toggles to requestor or admin → `area_admins` rows for that user are removed
+- Toggle off while already `requestor` (or on while already `admin`) is a no-op persist of the same role (still `200`)
 
 ## Success Criteria
 
@@ -176,6 +190,7 @@ All endpoints: Auth **Yes** + role **`requestor`**. Mount: `/vehicle-t2`. Flat J
 | `GET` | `/vehicle-t2/requests/:id` | Yes, requestor | My request detail (+ review fields + `assignments`) |
 | `PUT` | `/vehicle-t2/requests/:id` | Yes, requestor | Edit pending request |
 | `POST` | `/vehicle-t2/requests/:id/cancel` | Yes, requestor | Cancel when allowed |
+| `PUT` | `/vehicle-t2/profile/test-role` | Yes (any role) | Testing: set own `role` to `admin` or `requestor` (FR-019) |
 
 **Create / update request body:**
 
@@ -235,10 +250,21 @@ When none exist: `"assignments": []`.
 
 **Cancel success** (`200`): request payload with `status: "cancelled"`.
 
+**Test-role request body:**
+
+```json
+{ "role": "admin" }
+```
+
+Allowed values: `"admin"` | `"requestor"` only.
+
+**Test-role success** (`200`): user object (same shape as Feature 1 `GET` / `PUT /profile`).
+
 **Error responses:** `{ "message": "Human-readable explanation." }` with messages quoted in FRs / Gherkin.  
 **Not found / not owned:** `404` `{ "message": "Request not found." }`.  
 **Unauthenticated:** `401`.  
-**Wrong role:** `403` `{ "message": "You do not have permission for this action." }`.
+**Wrong role:** `403` `{ "message": "You do not have permission for this action." }` (request endpoints only; `test-role` allows any authenticated role).  
+**Invalid test-role:** `400` `{ "message": "Role must be admin or requestor." }`.
 
 **Dropdown data (owned elsewhere):**
 
@@ -248,6 +274,13 @@ When none exist: `"assignments": []`.
 ---
 
 ## Screen Requirements
+
+### [View: Profile] — route name `profile` — path `/profile` — extend Feature 1 `Profile.vue`
+
+*   Keep Feature 1 profile fields and **Save** behavior unchanged (`PUT /profile` ignores `role`).
+*   Add an always-visible **Admin** toggle (`v-switch`, label **Admin**, `data-test="admin-toggle"`) on the bottom-right of the profile card, horizontally opposite **Save**.
+*   Switch on when `profile.role === "admin"`; off for any other role (including `requestor` and `area_admin`).
+*   On change: call `PUT /vehicle-t2/profile/test-role` with `{ "role": "admin" }` (on) or `{ "role": "requestor" }` (off); on success refresh the Role field, update `localStorage` `user.role`, dispatch `user-changed`; on failure show error alert and revert the switch.
 
 ### [View: My Requests] — route name `my-requests` — path `/my-requests`
 
@@ -465,6 +498,42 @@ DB columns are snake_case; API/JSON uses camelCase via Sequelize `underscored: t
 *   **When** I `PUT /vehicle-t2/requests/99` or `POST /vehicle-t2/requests/99/cancel`
 *   **Then** the API returns `404` with `{ "message": "Request not found." }`
 
+### US-4.8 — Toggle admin role for testing
+
+#### Scenario: Requestor switches to admin via profile toggle
+```gherkin
+Given a signed-in user whose role is "requestor"
+When they turn on the Admin toggle on My Profile
+Then the system persists role "admin" for that user
+And the Role field shows Admin
+And localStorage user.role is "admin"
+```
+
+#### Scenario: Admin switches to requestor via profile toggle
+```gherkin
+Given a signed-in user whose role is "admin"
+When they turn off the Admin toggle on My Profile
+Then the system persists role "requestor" for that user
+And the Role field shows Requestor
+And localStorage user.role is "requestor"
+```
+
+#### Scenario: Test-role rejects area_admin
+```gherkin
+Given a signed-in user
+When they PUT /vehicle-t2/profile/test-role with role "area_admin"
+Then the response is 400 with message "Role must be admin or requestor."
+And their stored role is unchanged
+```
+
+#### Scenario: Leaving area_admin via test-role clears area assignments
+```gherkin
+Given a signed-in area_admin with at least one area_admins row
+When they PUT /vehicle-t2/profile/test-role with role "requestor"
+Then the response is 200 with role "requestor"
+And that user has no area_admins rows
+```
+
 ---
 
 ## Test Coverage Map
@@ -493,6 +562,12 @@ Each scenario above must map to at least one automated test.
 | US-4.7 | Requestor cannot list another user’s requests | `backend/tests/requests.test.js` | `Requestor cannot list another user’s requests` |
 | US-4.7 | Requestor cannot open another user’s request by id | `backend/tests/requests.test.js` | `Requestor cannot open another user’s request by id` |
 | US-4.7 | Requestor cannot update or cancel another user’s request | `backend/tests/requests.test.js` | `Requestor cannot update or cancel another user’s request` |
+| US-4.8 | Requestor switches to admin via profile toggle | `frontend/tests/Profile.test.js` | `Requestor switches to admin via profile toggle` |
+| US-4.8 | Requestor switches to admin via profile toggle | `backend/tests/profile.test.js` | `Requestor switches to admin via profile toggle` |
+| US-4.8 | Admin switches to requestor via profile toggle | `frontend/tests/Profile.test.js` | `Admin switches to requestor via profile toggle` |
+| US-4.8 | Admin switches to requestor via profile toggle | `backend/tests/profile.test.js` | `Admin switches to requestor via profile toggle` |
+| US-4.8 | Test-role rejects area_admin | `backend/tests/profile.test.js` | `Test-role rejects area_admin` |
+| US-4.8 | Leaving area_admin via test-role clears area assignments | `backend/tests/profile.test.js` | `Leaving area_admin via test-role clears area assignments` |
 
 ---
 
@@ -520,13 +595,13 @@ Consume Feature 3’s GET /vehicle-t2/vehicle-types for the form dropdown; do no
 
 ## Definition of Done
 
-*   [x] Backend and frontend implemented per this spec (**FR-001**–**FR-018** satisfied)
-*   [x] **Success Criteria (SC-001**–**SC-004)** met
-*   [ ] All mapped tests pass (`npm test`)
-*   [x] Test Coverage Map complete
+*   [x] Backend and frontend implemented per this spec (**FR-001**–**FR-019** satisfied)
+*   [x] **Success Criteria (SC-001**–**SC-004)** met (including US-4.8 scenarios)
+*   [x] All mapped tests pass (`npm test`)
+*   [x] Test Coverage Map complete (including US-4.8)
 *   [x] `features/reference/data-model.md` updated (schema)
-*   [x] `features/reference/api.md` updated (routes/payloads)
-*   [x] `features/reference/behavior.md` updated (ownership, validation, cancel rules)
+*   [x] `features/reference/api.md` updated (routes/payloads, including `PUT /profile/test-role`)
+*   [x] `features/reference/behavior.md` updated (ownership, validation, cancel rules, test-role)
 *   [x] Feature 3 vehicle-type list contract reconciled into this spec (`GET /vehicle-t2/vehicle-types`, usable = `isActive`, Status `Ready`)
 *   [x] Product implementation only after Features 1–2 and Feature 3 types exist on `dev`
 

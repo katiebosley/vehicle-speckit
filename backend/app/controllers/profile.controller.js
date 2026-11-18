@@ -58,4 +58,25 @@ exports.updateMe = async (req, res) => {
   }
 };
 
+exports.updateTestRole = async (req, res) => {
+  const { role } = req.body ?? {};
+  if (role !== "admin" && role !== "requestor") {
+    return res.status(400).send({ message: "Role must be admin or requestor." });
+  }
+
+  try {
+    const user = await User.findByPk(req.user.id);
+    await db.sequelize.transaction(async (transaction) => {
+      if (user.role === "area_admin" && role !== "area_admin") {
+        await db.areaAdmin.destroy({ where: { userId: user.id }, transaction });
+      }
+      await user.update({ role }, { transaction });
+    });
+    return res.send(user);
+  } catch (err) {
+    logger.error(`profile.updateTestRole failed: ${err.message}`);
+    return res.status(500).send({ message: "Could not update role." });
+  }
+};
+
 export default exports;
