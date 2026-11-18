@@ -203,31 +203,26 @@ describe("Feature 3 — Fleet Management", () => {
     });
 
     it("Block is refused when it overlaps an approved trip", async () => {
-      const { token, vehicle } = await fleetVehicle();
-      await db.sequelize.query(`CREATE TABLE IF NOT EXISTS requests (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        status VARCHAR(20) NOT NULL,
-        departure_at DATETIME NOT NULL,
-        return_at DATETIME NOT NULL
-      )`);
+      const { token, user, area, vehicle } = await fleetVehicle();
       await db.sequelize.query(`CREATE TABLE IF NOT EXISTS vehicle_assignments (
         id INT AUTO_INCREMENT PRIMARY KEY,
         request_id INT NOT NULL,
         vehicle_id INT NOT NULL
       )`);
-      await db.sequelize.query(
-        `INSERT INTO requests (status, departure_at, return_at) VALUES ('approved', :departure, :returnAt)`,
-        {
-          replacements: {
-            departure: new Date("2026-12-01T00:00:00.000Z"),
-            returnAt: new Date("2026-12-03T00:00:00.000Z"),
-          },
-        }
-      );
-      const [requests] = await db.sequelize.query("SELECT id FROM requests ORDER BY id DESC LIMIT 1");
+      const trip = await db.request.create({
+        requesterId: user.id,
+        areaId: area.id,
+        vehicleTypeId: vehicle.vehicleTypeId,
+        passengerCount: 1,
+        purpose: "Approved trip",
+        destination: "Campus",
+        departureAt: new Date("2026-12-01T00:00:00.000Z"),
+        returnAt: new Date("2026-12-03T00:00:00.000Z"),
+        status: "approved",
+      });
       await db.sequelize.query(
         `INSERT INTO vehicle_assignments (request_id, vehicle_id) VALUES (:requestId, :vehicleId)`,
-        { replacements: { requestId: requests[0].id, vehicleId: vehicle.id } }
+        { replacements: { requestId: trip.id, vehicleId: vehicle.id } }
       );
 
       const response = await request(app)

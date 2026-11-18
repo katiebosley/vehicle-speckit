@@ -411,7 +411,7 @@ describe("Feature 3 — Fleet Management", () => {
     });
 
     it("Retire is refused when a future approved trip exists", async () => {
-      const { token } = await signIn("admin", "admin-retire-trip@oc.edu");
+      const { token, user } = await signIn("admin", "admin-retire-trip@oc.edu");
       const area = await createArea("Athletics");
       const van = await createType("Van");
       const created = await request(app)
@@ -419,25 +419,25 @@ describe("Feature 3 — Fleet Management", () => {
         .set("Authorization", `Bearer ${token}`)
         .send(vehicleBody(area.id, van.id));
 
-      await db.sequelize.query(`CREATE TABLE IF NOT EXISTS requests (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        status VARCHAR(20) NOT NULL,
-        departure_at DATETIME NOT NULL,
-        return_at DATETIME NOT NULL
-      )`);
       await db.sequelize.query(`CREATE TABLE IF NOT EXISTS vehicle_assignments (
         id INT AUTO_INCREMENT PRIMARY KEY,
         request_id INT NOT NULL,
         vehicle_id INT NOT NULL
       )`);
-      await db.sequelize.query(
-        `INSERT INTO requests (status, departure_at, return_at) VALUES ('approved', :departure, :returnAt)`,
-        { replacements: { departure: new Date("2026-12-01T00:00:00.000Z"), returnAt: new Date("2099-01-01T00:00:00.000Z") } }
-      );
-      const [requests] = await db.sequelize.query("SELECT id FROM requests ORDER BY id DESC LIMIT 1");
+      const trip = await db.request.create({
+        requesterId: user.id,
+        areaId: area.id,
+        vehicleTypeId: van.id,
+        passengerCount: 1,
+        purpose: "Future trip",
+        destination: "Campus",
+        departureAt: new Date("2026-12-01T00:00:00.000Z"),
+        returnAt: new Date("2099-01-01T00:00:00.000Z"),
+        status: "approved",
+      });
       await db.sequelize.query(
         `INSERT INTO vehicle_assignments (request_id, vehicle_id) VALUES (:requestId, :vehicleId)`,
-        { replacements: { requestId: requests[0].id, vehicleId: created.body.id } }
+        { replacements: { requestId: trip.id, vehicleId: created.body.id } }
       );
 
       const response = await request(app)

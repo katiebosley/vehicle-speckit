@@ -1,6 +1,6 @@
 # API Reference
 
-**Status:** Feature 1 sign-in, users, and profile, plus Feature 3 vehicle types, vehicles, unavailability, and the area reads the Fleet screen needs.
+**Status:** Feature 1 sign-in, users, and profile, Feature 3 fleet, and Feature 4 requests.
 
 API mount path is `/vehicle-t2` (see `backend/server.js`).
 
@@ -103,6 +103,33 @@ There is no delete for a vehicle. A requestor receives `403` on every vehicle ro
 |--------|------|------|
 | `GET` | `/vehicle-t2/areas` | Any signed-in role. Admin receives every area. Other roles receive active areas. Ordered by name. |
 | `GET` | `/vehicle-t2/areas/mine` | Admin or area admin. Areas from `getManagedAreaIds`, including inactive ones. |
+
+### Requests (Feature 4)
+
+All routes require a signed-in `requestor`. Other roles receive `403` `{ "message": "You do not have permission for this action." }`.
+
+| Method | Path | Success |
+|--------|------|---------|
+| `POST` | `/vehicle-t2/requests` | `201` pending request. `requesterId` comes from the session. `vehiclesNeeded` defaults to `1`. |
+| `GET` | `/vehicle-t2/requests` | `200` array of the caller’s requests, `createdAt` descending. Includes `status`, `areaName`, and `vehicleTypeName`. |
+| `GET` | `/vehicle-t2/requests/:id` | `200` owned request plus `reviewNotes`, `reviewer` when set, and `assignments` (`[]` when none). |
+| `PUT` | `/vehicle-t2/requests/:id` | `200` updated pending request. Does not change `requesterId` or review fields. |
+| `POST` | `/vehicle-t2/requests/:id/cancel` | `200` with `status` `cancelled`. |
+
+Create and update body: `areaId`, `purpose`, `destination`, `departureAt`, `returnAt`, `passengerCount`, `vehicleTypeId`, optional `vehiclesNeeded`.
+
+Detail `assignments` items are `{ id, vehicle: { id, name, licensePlate }, driver: { id, firstName, lastName } | null }` when a later feature has stored rows.
+
+| Status | Message | When |
+|--------|---------|------|
+| `400` | `All required fields must be provided.` | A required field is missing or blank |
+| `400` | `Return must be after departure.` | `returnAt` is before or equal to `departureAt` |
+| `400` | `Departure must be in the future.` | `departureAt` is now or in the past |
+| `400` | `Passenger count and vehicles needed must be at least 1.` | Either value is not an integer of at least 1 |
+| `400` | `Invalid area or vehicle type.` | Area or vehicle type is missing from the active lists |
+| `400` | `Only pending requests can be edited.` | Update when status is not `pending` |
+| `400` | `This request cannot be cancelled.` | Cancel is not allowed for that status and departure |
+| `404` | `Request not found.` | Unknown id, or the row belongs to someone else |
 
 ## Conventions
 

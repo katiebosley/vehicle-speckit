@@ -7,6 +7,7 @@ import areaAdminModel from "./areaAdmin.model.js";
 import vehicleTypeModel from "./vehicleType.model.js";
 import vehicleModel from "./vehicle.model.js";
 import vehicleUnavailabilityModel from "./vehicleUnavailability.model.js";
+import requestModel from "./request.model.js";
 
 const db = {};
 db.Sequelize = Sequelize;
@@ -19,6 +20,7 @@ db.areaAdmin = areaAdminModel(sequelize, Sequelize);
 db.vehicleType = vehicleTypeModel(sequelize, Sequelize);
 db.vehicle = vehicleModel(sequelize, Sequelize);
 db.vehicleUnavailability = vehicleUnavailabilityModel(sequelize, Sequelize);
+db.request = requestModel(sequelize, Sequelize);
 
 db.user.hasMany(db.session, { foreignKey: { name: "userId", allowNull: false }, onDelete: "CASCADE" });
 db.session.belongsTo(db.user, { foreignKey: { name: "userId", allowNull: false }, as: "user" });
@@ -45,5 +47,29 @@ db.vehicle.belongsTo(db.vehicleType, { foreignKey: "vehicleTypeId", as: "vehicle
 db.vehicle.hasMany(db.vehicleUnavailability, { foreignKey: "vehicleId", as: "unavailability" });
 db.vehicleUnavailability.belongsTo(db.vehicle, { foreignKey: "vehicleId" });
 db.vehicleUnavailability.belongsTo(db.user, { foreignKey: "createdBy" });
+
+db.user.hasMany(db.request, { foreignKey: "requesterId", as: "requests" });
+db.request.belongsTo(db.user, {
+  foreignKey: { name: "requesterId", allowNull: false },
+  as: "requester",
+  onDelete: "RESTRICT",
+});
+db.request.belongsTo(db.user, {
+  foreignKey: { name: "reviewedBy", allowNull: true },
+  as: "reviewer",
+  onDelete: "SET NULL",
+});
+db.area.hasMany(db.request, { foreignKey: "areaId" });
+db.request.belongsTo(db.area, {
+  foreignKey: { name: "areaId", allowNull: false },
+  as: "area",
+  onDelete: "RESTRICT",
+});
+db.vehicleType.hasMany(db.request, { foreignKey: "vehicleTypeId" });
+db.request.belongsTo(db.vehicleType, {
+  foreignKey: { name: "vehicleTypeId", allowNull: false },
+  as: "vehicleType",
+  onDelete: "RESTRICT",
+});
 
 export default db;

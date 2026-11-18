@@ -6,6 +6,10 @@ import Users from "./views/Users.vue";
 import Profile from "./views/Profile.vue";
 import VehicleTypes from "./views/VehicleTypes.vue";
 import Fleet from "./views/Fleet.vue";
+import MyRequests from "./views/MyRequests.vue";
+import RequestNew from "./views/RequestNew.vue";
+import RequestDetail from "./views/RequestDetail.vue";
+import RequestEdit from "./views/RequestEdit.vue";
 
 export const routes = [
   {
@@ -40,6 +44,32 @@ export const routes = [
     name: "fleet",
     component: Fleet,
     meta: { roles: ["admin", "area_admin"] },
+  },
+  {
+    path: "/my-requests",
+    name: "my-requests",
+    component: MyRequests,
+    meta: { roles: ["requestor"] },
+  },
+  {
+    path: "/my-requests/new",
+    name: "request-new",
+    component: RequestNew,
+    meta: { roles: ["requestor"] },
+  },
+  {
+    path: "/my-requests/:id",
+    name: "request-detail",
+    component: RequestDetail,
+    props: true,
+    meta: { roles: ["requestor"] },
+  },
+  {
+    path: "/my-requests/:id/edit",
+    name: "request-edit",
+    component: RequestEdit,
+    props: true,
+    meta: { roles: ["requestor"] },
   },
   {
     path: "/:pathMatch(.*)*",

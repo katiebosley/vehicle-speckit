@@ -29,6 +29,7 @@ async function mountMenuBar(path = "/") {
       { path: "/profile", name: "profile", component: Blank },
       { path: "/vehicle-types", name: "vehicle-types", component: Blank },
       { path: "/fleet", name: "fleet", component: Blank },
+      { path: "/my-requests", name: "my-requests", component: Blank },
     ],
   });
   await router.push(path);
@@ -114,7 +115,7 @@ describe("Feature 1 — Sign-in, Roles & User Management", () => {
       signInAs("requestor");
       const { wrapper } = await mountMenuBar("/");
 
-      expect(labels(wrapper)).toEqual(["Profile", "Sign out"]);
+      expect(labels(wrapper)).toEqual(["My Requests", "Profile", "Sign out"]);
       expect(wrapper.find("[data-test='user-name']").text()).toBe("Jane Doe");
     });
 

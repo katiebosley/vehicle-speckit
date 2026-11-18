@@ -520,15 +520,15 @@ Consume Feature 3’s GET /vehicle-t2/vehicle-types for the form dropdown; do no
 
 ## Definition of Done
 
-*   [ ] Backend and frontend implemented per this spec (**FR-001**–**FR-018** satisfied)
-*   [ ] **Success Criteria (SC-001**–**SC-004)** met
+*   [x] Backend and frontend implemented per this spec (**FR-001**–**FR-018** satisfied)
+*   [x] **Success Criteria (SC-001**–**SC-004)** met
 *   [ ] All mapped tests pass (`npm test`)
-*   [ ] Test Coverage Map complete
-*   [ ] `features/reference/data-model.md` updated (schema)
-*   [ ] `features/reference/api.md` updated (routes/payloads)
-*   [ ] `features/reference/behavior.md` updated (ownership, validation, cancel rules)
+*   [x] Test Coverage Map complete
+*   [x] `features/reference/data-model.md` updated (schema)
+*   [x] `features/reference/api.md` updated (routes/payloads)
+*   [x] `features/reference/behavior.md` updated (ownership, validation, cancel rules)
 *   [x] Feature 3 vehicle-type list contract reconciled into this spec (`GET /vehicle-t2/vehicle-types`, usable = `isActive`, Status `Ready`)
-*   [ ] Product implementation only after Features 1–2 and Feature 3 types exist on `dev`
+*   [x] Product implementation only after Features 1–2 and Feature 3 types exist on `dev`
 
 ---
 

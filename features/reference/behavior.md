@@ -23,6 +23,21 @@
 | Blocks cannot overlap each other or an approved trip. Touching windows are allowed. | `400` / `409` messages in Feature 3 FR-017 and FR-018 |
 | `npm run seed --prefix backend` adds Car, Truck, Van, and Golf Cart, plus sample vehicles, without overwriting existing rows. | `backend/scripts/seed.mjs` |
 
+## Requests (Feature 4)
+
+| Rule | Enforcement |
+|------|-------------|
+| Only a `requestor` may create, list, view, edit, or cancel requests. | `401` without a session; `403` `{ "message": "You do not have permission for this action." }` for other roles |
+| `requesterId` is the signed-in user. The client cannot set it, and cannot set review fields or status on create. | `request.controller.js` |
+| List and detail return only that user’s rows. Another user’s id is `404` `{ "message": "Request not found." }`. | `getOwnedRequestOrNull` |
+| List order is `createdAt` descending. | `listOwnedRequests` |
+| Create and update reject a blank required field, a return that is not after departure, a departure that is not in the future, a passenger count or vehicles-needed value below 1, and an inactive or unknown area or vehicle type. | `400` with the messages in Feature 4 FR-005 through FR-009 |
+| `vehiclesNeeded` defaults to `1` when omitted. | `request.controller.js` |
+| Edit is allowed only while `status` is `pending`, and it does not change review fields or `requesterId`. | `400` `{ "message": "Only pending requests can be edited." }` |
+| Cancel is allowed for `pending`, and for `approved` when `departureAt` is still in the future. Other cases stay unchanged. | `400` `{ "message": "This request cannot be cancelled." }` |
+| Detail includes review notes and assignment summaries when those values exist. Assignment rows are not written here. | `GET /vehicle-t2/requests/:id` |
+| **My Requests** is in the menu for `requestor` only, at `/my-requests`. | `MenuBar.vue`, `router.js` |
+
 These files answer: *"What rules does the app enforce right now?"*  
 They do **not** authorize new scope — implement only from `features/feature-*.md`.
 
@@ -53,7 +68,7 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | `authenticate` sets `req.user = { id, role, email }`; `requireRole(...roles)` returns `403` | `authorization/authorization.js` | FR-007 |
 | `/users…` is admin-only (API `403`, route redirect to `home`) | `user.routes.js`, `router.js` `meta.roles` | FR-010, FR-011 |
 | Signed-out users are redirected to `login`; signed-in users are redirected away from `login` | `router.js` `authGuard` | FR-010 |
-| `MenuBar` on every route; Profile for all roles, Users and Vehicle Types for admin, Fleet for admin and area admin, nothing when signed out | `MenuBar.vue` | FR-009, Feature 3 FR-020 |
+| `MenuBar` on every route; Profile for all roles, Users and Vehicle Types for admin, Fleet for admin and area admin, My Requests for requestor, nothing when signed out | `MenuBar.vue` | FR-009, Feature 3 FR-020, Feature 4 FR-018 |
 
 ## User management — Feature 1
 

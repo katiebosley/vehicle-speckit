@@ -1,6 +1,6 @@
 # Data Model Reference
 
-**Status:** Feature 1 (`users`, `sessions`) and Feature 3 (`vehicle_types`, `areas`, `area_admins`, `vehicles`, `vehicle_unavailability`).
+**Status:** Feature 1 (`users`, `sessions`), Feature 3 (`vehicle_types`, `areas`, `area_admins`, `vehicles`, `vehicle_unavailability`), and Feature 4 (`requests`).
 
 Update this file when a feature that defines schema merges to `dev`.
 
@@ -68,6 +68,29 @@ One vehicle belongs to one area and one vehicle type. `status` is `available`, `
 
 A dated block on one vehicle: `starts_at`, `ends_at`, `reason`, and `created_by`. It does not change `status`.
 
+### `requests` — Feature 4
+
+| Column | Type | Rules |
+|--------|------|-------|
+| `id` | INTEGER PK | Auto-increment |
+| `requester_id` | INTEGER FK | Required; references `users.id`; set from the session |
+| `area_id` | INTEGER FK | Required; references `areas.id`; area must be active on create and update |
+| `vehicle_type_id` | INTEGER FK | Required; references `vehicle_types.id`; type must be active on create and update |
+| `vehicles_needed` | INTEGER | Required; default `1`; at least 1 |
+| `passenger_count` | INTEGER | Required; at least 1 |
+| `purpose` | STRING(255) | Required; trimmed; not blank |
+| `destination` | STRING(255) | Required; trimmed; not blank |
+| `departure_at` | DATETIME | Required; must be after the server time on create and update |
+| `return_at` | DATETIME | Required; must be after `departure_at` |
+| `status` | ENUM | `pending`, `approved`, `denied`, `cancelled`, `completed`; default `pending` |
+| `reviewed_by` | INTEGER FK NULL | References `users.id`; written by Feature 5 |
+| `reviewed_at` | DATETIME NULL | Written by Feature 5 |
+| `review_notes` | TEXT NULL | Written by Feature 5 |
+| `created_at` | DATETIME | Sequelize timestamps |
+| `updated_at` | DATETIME | Sequelize timestamps |
+
+Model: `backend/app/models/request.model.js`. `vehicle_assignments` is not created here. Request detail reads that table when it exists and returns `assignments: []` otherwise.
+
 ## Associations
 
 Defined in `backend/app/models/index.js`:
@@ -80,3 +103,7 @@ Defined in `backend/app/models/index.js`:
 - `Vehicle` hasMany `VehicleUnavailability`
 - `VehicleUnavailability` belongsTo `Vehicle`
 - `VehicleUnavailability` belongsTo `User` (`createdBy`)
+- `User` hasMany `Request` (`requesterId`, alias `requests`)
+- `Request` belongsTo `User` as `requester` (`requesterId`) and as `reviewer` (`reviewedBy`)
+- `Area` hasMany `Request`; `Request` belongsTo `Area`
+- `VehicleType` hasMany `Request`; `Request` belongsTo `VehicleType`
