@@ -61,6 +61,7 @@ export default (sequelize, Sequelize) =>
       },
     },
     {
+      tableName: "users",
       underscored: true,
       defaultScope: {
         attributes: { exclude: ["googleId"] },

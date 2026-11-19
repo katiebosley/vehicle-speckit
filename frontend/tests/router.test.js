@@ -21,6 +21,27 @@ beforeEach(() => {
   localStorage.clear();
 });
 
+describe("Feature 5 — Vehicle Management", () => {
+  describe("US-5.13 — Restrict review to area admins and admins", () => {
+    it("Unauthenticated user navigates to review", async () => {
+      const router = freshRouter();
+
+      await router.push("/review");
+
+      expect(router.currentRoute.value.name).toBe("login");
+    });
+
+    it("Requestor navigates to review", async () => {
+      signInAs("requestor");
+      const router = freshRouter();
+
+      await router.push("/review");
+
+      expect(router.currentRoute.value.name).toBe("home");
+    });
+  });
+});
+
 describe("Feature 1 — Sign-in, Roles & User Management", () => {
   describe("US-1.1 — Sign in with Google", () => {
     it("Signed-in user visits login page", async () => {

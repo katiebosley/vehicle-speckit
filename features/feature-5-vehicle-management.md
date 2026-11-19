@@ -1139,13 +1139,13 @@ Do not add a database-level overlap constraint.
 
 ## Definition of Done
 
-- [ ] Backend and frontend implemented per this spec (**FR-0NN** satisfied)
-- [ ] **Success Criteria (SC-00N)** met
-- [ ] All mapped tests pass (`npm test`)
-- [ ] Test Coverage Map complete
-- [ ] `features/reference/data-model.md` updated (if schema changed)
-- [ ] `features/reference/api.md` updated (if API changed)
-- [ ] `features/reference/behavior.md` updated (if product rules changed)
+- [x] Backend and frontend implemented per this spec (**FR-0NN** satisfied)
+- [x] **Success Criteria (SC-00N)** met
+- [x] All mapped tests pass (`npm test`)
+- [x] Test Coverage Map complete
+- [x] `features/reference/data-model.md` updated (if schema changed)
+- [x] `features/reference/api.md` updated (if API changed)
+- [x] `features/reference/behavior.md` updated (if product rules changed)
 
 ---
 
