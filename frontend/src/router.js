@@ -12,6 +12,7 @@ import MyRequests from "./views/MyRequests.vue";
 import RequestNew from "./views/RequestNew.vue";
 import RequestDetail from "./views/RequestDetail.vue";
 import RequestEdit from "./views/RequestEdit.vue";
+import ReviewQueue from "./views/ReviewQueue.vue";
 
 export const routes = [
   {
@@ -84,6 +85,12 @@ export const routes = [
     component: RequestEdit,
     props: true,
     meta: { roles: ["requestor"] },
+  },
+  {
+    path: "/review",
+    name: "review",
+    component: ReviewQueue,
+    meta: { roles: ["admin", "area_admin"] },
   },
   {
     path: "/:pathMatch(.*)*",

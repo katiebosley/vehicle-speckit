@@ -436,8 +436,9 @@ describe("Feature 3 — Fleet Management", () => {
         status: "approved",
       });
       await db.sequelize.query(
-        `INSERT INTO vehicle_assignments (request_id, vehicle_id) VALUES (:requestId, :vehicleId)`,
-        { replacements: { requestId: trip.id, vehicleId: created.body.id } }
+        `INSERT INTO vehicle_assignments (request_id, vehicle_id, assigned_by, assigned_at)
+         VALUES (:requestId, :vehicleId, :assignedBy, NOW())`,
+        { replacements: { requestId: trip.id, vehicleId: created.body.id, assignedBy: user.id } }
       );
 
       const response = await request(app)

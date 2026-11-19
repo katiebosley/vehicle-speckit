@@ -33,6 +33,10 @@ export default (sequelize, Sequelize) => {
         type: Sequelize.STRING(255),
         allowNull: false,
       },
+      destinationId: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+      },
       departureAt: {
         type: Sequelize.DATE,
         allowNull: false,

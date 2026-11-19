@@ -362,13 +362,14 @@ describe("Feature 4 — Making and Tracking Requests", () => {
         await db.sequelize.query("ALTER TABLE vehicle_assignments ADD COLUMN driver_id INT NULL");
       }
       await db.sequelize.query(
-        `INSERT INTO vehicle_assignments (request_id, vehicle_id, driver_id)
-         VALUES (:requestId, :vehicleId, :driverId)`,
+        `INSERT INTO vehicle_assignments (request_id, vehicle_id, driver_id, assigned_by, assigned_at)
+         VALUES (:requestId, :vehicleId, :driverId, :assignedBy, NOW())`,
         {
           replacements: {
             requestId: created.body.id,
             vehicleId: vehicle.id,
             driverId: driver.id,
+            assignedBy: reviewer.user.id,
           },
         }
       );
