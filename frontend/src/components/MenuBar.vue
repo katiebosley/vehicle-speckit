@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { title: "Profile", name: "profile" },
   { title: "Vehicle Types", name: "vehicle-types", roles: ["admin"] },
   { title: "Fleet", name: "fleet", roles: ["admin", "area_admin"] },
+  { title: "Review", name: "review", roles: ["area_admin", "admin"] },
 ];
 
 const route = useRoute();

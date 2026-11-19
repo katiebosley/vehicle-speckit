@@ -1,6 +1,6 @@
 # Data Model Reference
 
-**Status:** Feature 1 (`users`, `sessions`), Feature 2 (`areas`, `area_admins`), Feature 3 (`vehicle_types`, `vehicles`, `vehicle_unavailability`), and Feature 4 (`requests`).
+**Status:** Feature 1 (`users`, `sessions`), Feature 2 (`areas`, `area_admins`), Feature 3 (`vehicle_types`, `vehicles`, `vehicle_unavailability`), Feature 4 (`requests`), and Feature 5 (`destinations`, `vehicle_assignments`, `trip_logs`, `requests.destination_id`).
 
 Update this file when a feature that defines schema merges to `dev`.
 
@@ -100,7 +100,8 @@ A dated block on one vehicle: `starts_at`, `ends_at`, `reason`, and `created_by`
 | `vehicles_needed` | INTEGER | Required; default `1`; at least 1 |
 | `passenger_count` | INTEGER | Required; at least 1 |
 | `purpose` | STRING(255) | Required; trimmed; not blank |
-| `destination` | STRING(255) | Required; trimmed; not blank |
+| `destination` | STRING(255) | Required; trimmed; not blank. Kept so Feature 4 request create and edit still store a destination string |
+| `destination_id` | INTEGER FK NULL | Optional; references `destinations.id`. Review responses use the destination name when this is set |
 | `departure_at` | DATETIME | Required; must be after the server time on create and update |
 | `return_at` | DATETIME | Required; must be after `departure_at` |
 | `status` | ENUM | `pending`, `approved`, `denied`, `cancelled`, `completed`; default `pending` |
@@ -110,7 +111,47 @@ A dated block on one vehicle: `starts_at`, `ends_at`, `reason`, and `created_by`
 | `created_at` | DATETIME | Sequelize timestamps |
 | `updated_at` | DATETIME | Sequelize timestamps |
 
-Model: `backend/app/models/request.model.js`. `vehicle_assignments` is not created here. Request detail reads that table when it exists and returns `assignments: []` otherwise.
+Model: `backend/app/models/request.model.js`. Feature 4 still writes the `destination` string. Feature 5 adds `destination_id` and writes `status`, `reviewed_by`, `reviewed_at`, and `review_notes`.
+
+### `destinations` — Feature 5
+
+| Column | Type | Rules |
+|--------|------|-------|
+| `id` | INTEGER PK | Auto-increment |
+| `name` | STRING(255) | Required; trimmed; unique ignoring case |
+| `is_active` | BOOLEAN | Default `true` |
+| `created_at` | DATETIME | Sequelize timestamps |
+| `updated_at` | DATETIME | Sequelize timestamps |
+
+Model: `backend/app/models/destination.model.js`. There is no delete.
+
+### `vehicle_assignments` — Feature 5
+
+| Column | Type | Rules |
+|--------|------|-------|
+| `id` | INTEGER PK | Auto-increment |
+| `request_id` | INTEGER FK | Required; references `requests.id` |
+| `vehicle_id` | INTEGER FK | Required; references `vehicles.id` |
+| `driver_id` | INTEGER FK NULL | Optional; references `users.id` |
+| `assigned_by` | INTEGER FK | References `users.id`; set from the session |
+| `assigned_at` | DATETIME | Set on create and update |
+
+Unique index on (`request_id`, `vehicle_id`). Index on `vehicle_id`. Sequelize `timestamps: false`. No database overlap constraint. Model: `backend/app/models/vehicleAssignment.model.js`.
+
+### `trip_logs` — Feature 5
+
+| Column | Type | Rules |
+|--------|------|-------|
+| `id` | INTEGER PK | Auto-increment |
+| `assignment_id` | INTEGER FK | Required; unique; references `vehicle_assignments.id` |
+| `start_mileage` | INTEGER | Required |
+| `end_mileage` | INTEGER | Required; greater than or equal to `start_mileage` |
+| `fuel_added_gallons` | DECIMAL(6,2) NULL | Optional; zero or greater |
+| `picked_up_at` | DATETIME | Required |
+| `returned_at` | DATETIME | Required; on or after `picked_up_at` |
+| `issues_reported` | TEXT NULL | Optional |
+
+Sequelize `timestamps: false`. Model: `backend/app/models/tripLog.model.js`.
 
 ## Associations
 
@@ -129,3 +170,8 @@ Defined in `backend/app/models/index.js`:
 - `Request` belongsTo `User` as `requester` (`requesterId`) and as `reviewer` (`reviewedBy`)
 - `Area` hasMany `Request`; `Request` belongsTo `Area`
 - `VehicleType` hasMany `Request`; `Request` belongsTo `VehicleType`
+- `Destination` hasMany `Request` (`destinationId`); `Request` belongsTo `Destination` as `destinationRecord` (the `destination` string column keeps that name)
+- `Request` hasMany `VehicleAssignment` (`as: 'assignments'`); `VehicleAssignment` belongsTo `Request`
+- `Vehicle` hasMany `VehicleAssignment`; `VehicleAssignment` belongsTo `Vehicle`
+- `VehicleAssignment` belongsTo `User` as `driver` (`driverId`) and as `assigner` (`assignedBy`)
+- `VehicleAssignment` hasOne `TripLog` (`as: 'tripLog'`); `TripLog` belongsTo `VehicleAssignment`

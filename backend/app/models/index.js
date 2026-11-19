@@ -8,6 +8,9 @@ import vehicleTypeModel from "./vehicleType.model.js";
 import vehicleModel from "./vehicle.model.js";
 import vehicleUnavailabilityModel from "./vehicleUnavailability.model.js";
 import requestModel from "./request.model.js";
+import destinationModel from "./destination.model.js";
+import vehicleAssignmentModel from "./vehicleAssignment.model.js";
+import tripLogModel from "./tripLog.model.js";
 
 const db = {};
 db.Sequelize = Sequelize;
@@ -21,6 +24,9 @@ db.vehicleType = vehicleTypeModel(sequelize, Sequelize);
 db.vehicle = vehicleModel(sequelize, Sequelize);
 db.vehicleUnavailability = vehicleUnavailabilityModel(sequelize, Sequelize);
 db.request = requestModel(sequelize, Sequelize);
+db.destination = destinationModel(sequelize, Sequelize);
+db.vehicleAssignment = vehicleAssignmentModel(sequelize, Sequelize);
+db.tripLog = tripLogModel(sequelize, Sequelize);
 
 db.user.hasMany(db.session, { foreignKey: { name: "userId", allowNull: false }, onDelete: "CASCADE" });
 db.session.belongsTo(db.user, { foreignKey: { name: "userId", allowNull: false }, as: "user" });
@@ -73,5 +79,20 @@ db.request.belongsTo(db.vehicleType, {
   as: "vehicleType",
   onDelete: "RESTRICT",
 });
+
+db.destination.hasMany(db.request, { foreignKey: "destinationId" });
+db.request.belongsTo(db.destination, { foreignKey: "destinationId", as: "destinationRecord" });
+
+db.request.hasMany(db.vehicleAssignment, { foreignKey: "requestId", as: "assignments" });
+db.vehicleAssignment.belongsTo(db.request, { foreignKey: "requestId", as: "request" });
+
+db.vehicle.hasMany(db.vehicleAssignment, { foreignKey: "vehicleId" });
+db.vehicleAssignment.belongsTo(db.vehicle, { foreignKey: "vehicleId", as: "vehicle" });
+
+db.vehicleAssignment.belongsTo(db.user, { foreignKey: "driverId", as: "driver" });
+db.vehicleAssignment.belongsTo(db.user, { foreignKey: "assignedBy", as: "assigner" });
+
+db.vehicleAssignment.hasOne(db.tripLog, { foreignKey: "assignmentId", as: "tripLog" });
+db.tripLog.belongsTo(db.vehicleAssignment, { foreignKey: "assignmentId", as: "assignment" });
 
 export default db;

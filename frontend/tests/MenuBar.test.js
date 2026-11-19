@@ -31,6 +31,7 @@ async function mountMenuBar(path = "/") {
       { path: "/my-areas", name: "my-areas", component: Blank },
       { path: "/vehicle-types", name: "vehicle-types", component: Blank },
       { path: "/fleet", name: "fleet", component: Blank },
+      { path: "/review", name: "review", component: Blank },
       { path: "/my-requests", name: "my-requests", component: Blank },
     ],
   });
@@ -73,6 +74,28 @@ beforeEach(() => {
 afterEach(() => {
   delete window.google;
   vi.clearAllMocks();
+});
+
+describe("Feature 5 — Vehicle Management", () => {
+  describe("US-5.1 — Select to work with the review queue", () => {
+    it("Menu Selection", async () => {
+      signInAs("area_admin");
+      const { wrapper, router } = await mountMenuBar("/");
+
+      await clickButton(wrapper, "Review");
+
+      expect(router.currentRoute.value.name).toBe("review");
+    });
+  });
+
+  describe("US-5.13 — Restrict review to area admins and admins", () => {
+    it("Requestor does not see Review in the menu", async () => {
+      signInAs("requestor");
+      const { wrapper } = await mountMenuBar("/");
+
+      expect(labels(wrapper)).not.toContain("Review");
+    });
+  });
 });
 
 describe("Feature 1 — Sign-in, Roles & User Management", () => {
@@ -132,7 +155,7 @@ describe("Feature 1 — Sign-in, Roles & User Management", () => {
       signInAs("admin");
       const { wrapper } = await mountMenuBar("/");
 
-      expect(labels(wrapper)).toEqual(["Users", "Areas", "Profile", "Vehicle Types", "Fleet", "Sign out"]);
+      expect(labels(wrapper)).toEqual(["Users", "Areas", "Profile", "Vehicle Types", "Fleet", "Review", "Sign out"]);
     });
   });
 
