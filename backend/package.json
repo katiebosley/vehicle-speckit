@@ -10,7 +10,7 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "seed": "node scripts/seed.mjs",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
-    "bundle": "node scripts/make-deploy.mjs",
+    "bundle": "rm -rf deploy && mkdir deploy && cp -r app server.js package.json package-lock.json course-t2-backend.service .env deploy",
     "promote-admin": "node app/scripts/promote-admin.js"
   },
   "keywords": [

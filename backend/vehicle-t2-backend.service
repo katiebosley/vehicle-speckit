@@ -1,0 +1,13 @@
+[Unit]
+Description=Vehicle app Node.js API (OC CS Speckit)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/nodeapps/2026/project4/t2 
+ExecStart= /usr/local/bin/node server.js
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

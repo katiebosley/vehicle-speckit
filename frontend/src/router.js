@@ -12,8 +12,10 @@ import RequestDetail from "./views/RequestDetail.vue";
 import RequestEdit from "./views/RequestEdit.vue";
 import ReviewQueue from "./views/ReviewQueue.vue";
 
-export const routes = [
-  {
+export const routes = ({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes : [
+    {
     path: "/login",
     name: "login",
     component: Login,
@@ -82,7 +84,8 @@ export const routes = [
     path: "/:pathMatch(.*)*",
     redirect: { name: "home" },
   },
-];
+],
+});
 
 export function authGuard(to) {
   const user = Utils.getStore("user");
