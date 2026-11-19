@@ -4,6 +4,7 @@ import Utils from "../config/utils.js";
 import areaServices from "../services/areaServices.js";
 import vehicleServices from "../services/vehicleServices.js";
 import vehicleTypeServices from "../services/vehicleTypeServices.js";
+import scheduleServices from "../services/scheduleServices.js";
 
 const makes = ["Chevrolet", "Ford", "GMC", "Honda", "Toyota", "Club Car"];
 const models = ["Camry", "Colorado", "F-150", "Odyssey", "Transit", "Onward"];
@@ -52,6 +53,12 @@ const blockVehicle = ref(null);
 const blockError = ref("");
 const blockSaving = ref(false);
 const blockForm = ref({ startsAt: "", endsAt: "", reason: "" });
+
+const historyDialog = ref(false);
+const historyVehicle = ref(null);
+const history = ref([]);
+const historyLoading = ref(false);
+const historyError = ref("");
 
 const emptyForm = () => ({
   areaId: null,
@@ -220,6 +227,22 @@ async function confirmRetire() {
   await save();
 }
 
+async function openHistory(vehicle) {
+  historyVehicle.value = vehicle;
+  history.value = [];
+  historyError.value = "";
+  historyDialog.value = true;
+  historyLoading.value = true;
+  try {
+    const response = await scheduleServices.tripLogs(vehicle.id);
+    history.value = response.data;
+  } catch (err) {
+    historyError.value = err.response?.data?.message || "Could not load trip history.";
+  } finally {
+    historyLoading.value = false;
+  }
+}
+
 async function openBlocks(vehicle) {
   blockError.value = "";
   blockForm.value = { startsAt: "", endsAt: "", reason: "" };
@@ -363,6 +386,7 @@ onMounted(async () => {
             <v-btn icon size="small" aria-label="Block dates" variant="text" @click="openBlocks(vehicle)">
               <v-icon>mdi-calendar-lock</v-icon>
             </v-btn>
+            <v-btn variant="text" @click="openHistory(vehicle)">Trip history</v-btn>
           </td>
         </tr>
       </tbody>
@@ -430,6 +454,27 @@ onMounted(async () => {
           <v-spacer />
           <v-btn variant="text" @click="blockDialog = false">Close</v-btn>
           <v-btn color="primary" class="oc-cta" :loading="blockSaving" @click="addBlock">Add block</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="historyDialog" max-width="640">
+      <v-card>
+        <v-card-title>Trip history</v-card-title>
+        <v-card-text>
+          <v-progress-linear v-if="historyLoading" indeterminate color="primary" class="mb-4" />
+          <v-alert v-if="historyError" type="error" class="mb-4">{{ historyError }}</v-alert>
+          <p v-if="!historyLoading && !historyError && history.length === 0">No trips logged for this vehicle.</p>
+          <div v-for="log in history" :key="log.id" class="mb-3">
+            <div>{{ log.pickedUpAt }} – {{ log.returnedAt || "out" }}</div>
+            <div>Mileage {{ log.startMileage }} – {{ log.endMileage ?? "—" }}</div>
+            <div v-if="log.fuelAddedGallons != null">Fuel {{ log.fuelAddedGallons }} gal</div>
+            <div v-if="log.issuesReported">{{ log.issuesReported }}</div>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="historyDialog = false">Close</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

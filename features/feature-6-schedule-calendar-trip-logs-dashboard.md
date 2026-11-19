@@ -485,13 +485,13 @@ If Sprint 3 is short, ship P1 only (calendar, availability, dashboards) and leav
 
 ## Definition of Done
 
-*   [ ] P1 backend and frontend implemented (**FR-001**–**FR-011**, **FR-019**–**FR-021**)
-*   [ ] P2 trip logs implemented **or** explicitly deferred in Out of Scope / release notes (**FR-012**–**FR-018**)
-*   [ ] **Success Criteria** for shipped slice met (**SC-001**–**SC-004**, plus **SC-005** if P2 ships; **SC-006**)
+*   [x] P1 backend and frontend implemented (**FR-001**–**FR-011**, **FR-019**–**FR-021**)
+*   [x] P2 trip logs implemented **or** explicitly deferred in Out of Scope / release notes (**FR-012**–**FR-018**)
+*   [x] **Success Criteria** for shipped slice met (**SC-001**–**SC-004**, plus **SC-005** if P2 ships; **SC-006**)
 *   [ ] Mapped tests for shipped scenarios pass (`npm test`)
-*   [ ] Test Coverage Map updated if P2 deferred (rows removed or marked deferred)
-*   [ ] `features/reference/data-model.md` / `api.md` / `behavior.md` updated for what shipped
-*   [ ] Feature 1 home placeholder behavior superseded by this dashboard
+*   [x] Test Coverage Map updated if P2 deferred (rows removed or marked deferred)
+*   [x] `features/reference/data-model.md` / `api.md` / `behavior.md` updated for what shipped
+*   [x] Feature 1 home placeholder behavior superseded by this dashboard
 
 ---
 

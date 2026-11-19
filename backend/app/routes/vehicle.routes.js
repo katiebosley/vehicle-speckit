@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { authenticate, requireRole } from "../authorization/authorization.js";
 import controller from "../controllers/vehicle.controller.js";
+import tripLogController from "../controllers/tripLog.controller.js";
 
 const router = Router();
 const fleet = [authenticate, requireRole("admin", "area_admin")];
 
 router.get("/", fleet, controller.findAll);
+router.get("/:vehicleId/trip-logs", fleet, tripLogController.history);
 router.post("/", fleet, controller.create);
 router.get("/:vehicleId", fleet, controller.findOne);
 router.put("/:vehicleId", fleet, controller.update);

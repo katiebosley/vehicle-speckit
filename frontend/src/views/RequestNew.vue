@@ -5,6 +5,7 @@ import areaServices from "../services/areaServices.js";
 import requestServices from "../services/requestServices.js";
 import vehicleTypeServices from "../services/vehicleTypeServices.js";
 import RequestForm from "../components/RequestForm.vue";
+import AvailabilityPanel from "../components/AvailabilityPanel.vue";
 
 const router = useRouter();
 const areas = ref([]);
@@ -59,6 +60,10 @@ onMounted(loadOptions);
         @submit="submit"
         @cancel="router.push({ name: 'my-requests' })"
       />
+    </v-card>
+    <v-card v-if="!loading && !loadError" rounded="lg" class="pa-4 mt-4" elevation="2">
+      <h2 class="text-h5 mb-4">Check availability</h2>
+      <AvailabilityPanel />
     </v-card>
   </v-container>
 </template>

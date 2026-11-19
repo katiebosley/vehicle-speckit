@@ -11,6 +11,8 @@ import RequestNew from "./views/RequestNew.vue";
 import RequestDetail from "./views/RequestDetail.vue";
 import RequestEdit from "./views/RequestEdit.vue";
 import ReviewQueue from "./views/ReviewQueue.vue";
+import Calendar from "./views/Calendar.vue";
+import Availability from "./views/Availability.vue";
 
 export const routes = [
   {
@@ -77,6 +79,17 @@ export const routes = [
     name: "review",
     component: ReviewQueue,
     meta: { roles: ["admin", "area_admin"] },
+  },
+  {
+    path: "/calendar",
+    name: "calendar",
+    component: Calendar,
+    meta: { roles: ["admin", "area_admin"] },
+  },
+  {
+    path: "/availability",
+    name: "availability",
+    component: Availability,
   },
   {
     path: "/:pathMatch(.*)*",

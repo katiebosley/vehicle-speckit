@@ -13,10 +13,10 @@ export default (sequelize, Sequelize) =>
       },
       endMileage: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true,
       },
       fuelAddedGallons: {
-        type: Sequelize.DECIMAL(6, 2),
+        type: Sequelize.DECIMAL(8, 2),
         allowNull: true,
       },
       pickedUpAt: {
@@ -25,7 +25,7 @@ export default (sequelize, Sequelize) =>
       },
       returnedAt: {
         type: Sequelize.DATE,
-        allowNull: false,
+        allowNull: true,
       },
       issuesReported: {
         type: Sequelize.TEXT,
@@ -35,6 +35,5 @@ export default (sequelize, Sequelize) =>
     {
       tableName: "trip_logs",
       underscored: true,
-      timestamps: false,
     }
   );

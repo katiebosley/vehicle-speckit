@@ -1,6 +1,6 @@
 # API Reference
 
-**Status:** Feature 1 sign-in, users, and profile, Feature 3 fleet, Feature 4 requests, and Feature 5 review and destinations.
+**Status:** Feature 1 sign-in, users, and profile, Feature 3 fleet, Feature 4 requests, Feature 5 review and destinations, and Feature 6 calendar, availability, dashboard, and trip logs.
 
 API mount path is `/vehicle-t2` (see `backend/server.js`).
 
@@ -177,6 +177,51 @@ Approve body: `{ "review_notes": "optional", "assignments": [{ "vehicle_id": 3, 
 | `400` | `A destination named <name> already exists.` | Destination name matches ignoring case |
 | `404` | `Destination with id=<id> not found.` | Unknown destination |
 | `401` | Unauthorized message | No session |
+
+### Calendar, availability, dashboard, and trip logs (Feature 6)
+
+JSON is camelCase. Paths are on the `/vehicle-t2` mount. Every route requires a session.
+
+| Method | Path | Roles | Success |
+|--------|------|-------|---------|
+| `GET` | `/vehicle-t2/calendar?start=&end=&view=&areaId=&vehicleId=` | `admin`, `area_admin` | `200` assignment events that overlap `[start, end)` |
+| `GET` | `/vehicle-t2/availability?vehicleTypeId=&departureAt=&returnAt=` | any signed-in role | `200` vehicles of that type with status `available` and no overlapping assignment |
+| `GET` | `/vehicle-t2/dashboard` | any signed-in role | `200` role-specific home payload |
+| `POST` | `/vehicle-t2/assignments/:assignmentId/checkout` | assignment driver or `admin` | `200` trip log with `pickedUpAt` set |
+| `POST` | `/vehicle-t2/assignments/:assignmentId/checkin` | assignment driver or `admin` | `200` trip log with `returnedAt` set. Vehicle `currentMileage` becomes `endMileage` |
+| `GET` | `/vehicle-t2/vehicles/:vehicleId/trip-logs` | `admin`, `area_admin` in the vehicle's area | `200` trip logs, newest `pickedUpAt` first |
+
+`start` and `end` are ISO datetimes. `view` is `week` or `month` and does not replace `start` and `end`. An area admin who passes an `areaId` outside `getManagedAreaIds` receives `403`. With no `areaId`, that caller only sees managed areas. An admin sees every area.
+
+Calendar event: `assignmentId`, `requestId`, `areaId`, `vehicleId`, `vehicleName`, `licensePlate`, `driverId`, `driverFirstName`, `driverLastName`, `departureAt`, `returnAt`, plus `pickedUpAt`, `returnedAt`, and `startMileage` when a trip log exists.
+
+Availability item: `id`, `name`, `licensePlate`, `capacity`, `areaId`. An empty array means nothing is free.
+
+Dashboard `requestor`: `pendingRequests` (`id`, `purpose`, `departureAt`, `status`) and `upcomingTrips` (`assignmentId`, `requestId`, `vehicleId`, `vehicleName`, `driverId`, `departureAt`, `returnAt`, `pickedUpAt`, `returnedAt`, `startMileage`). Upcoming trips are the caller's requests or driving assignments with `departureAt` at or after now, soonest first.
+
+Dashboard `area_admin`: `pendingRequests` (same fields plus `areaId`) and `maintenanceVehicles` (`id`, `name`, `areaId`, `status`) for managed areas only.
+
+Dashboard `admin`: `pendingRequests` (with `areaId`), `pendingRequestCount`, and `maintenanceVehicleCount`.
+
+Check-out body: `{ "startMileage": 50000 }`. Check-in body: `{ "endMileage": 50120, "fuelAddedGallons": 8.5, "issuesReported": "Scratched bumper" }`. Trip log JSON: `id`, `assignmentId`, `startMileage`, `endMileage`, `fuelAddedGallons`, `pickedUpAt`, `returnedAt`, `issuesReported`, `createdAt`, `updatedAt`. History rows also include `vehicleId`, `driverId`, `driverFirstName`, and `driverLastName`.
+
+| Status | Message | When |
+|--------|---------|------|
+| `400` | `Start and end are required.` | Calendar `start` or `end` is missing or not a date |
+| `400` | `End must be after start.` | Calendar `end` is not after `start` |
+| `400` | `Vehicle type, departure, and return are required.` | Availability is missing a required query value |
+| `400` | `Return must be after departure.` | Availability `returnAt` is before or equal to `departureAt` |
+| `403` | `You do not manage this area.` | Area admin sets calendar `areaId` outside managed areas |
+| `400` | `Start mileage is required.` | Check-out `startMileage` is not an integer |
+| `400` | `This trip is already checked out.` | Check-out when `pickedUpAt` is already set |
+| `400` | `Check out before checking in.` | Check-in with no open check-out |
+| `400` | `End mileage is required.` | Check-in `endMileage` is not an integer |
+| `400` | `End mileage must be greater than or equal to start mileage.` | Check-in end mileage is lower than start mileage |
+| `403` | `You do not have permission for this action.` | Caller is not the assignment driver or an admin. An area admin outside the assignment's area receives `404` instead |
+| `404` | `Assignment not found.` | Unknown assignment, or an area admin outside that area |
+| `404` | `Vehicle not found.` | Unknown vehicle, or an area admin outside that vehicle's area |
+| `401` | Unauthorized message | No session |
+| `403` | `You do not have permission for this action.` | A requestor calls calendar or trip history |
 
 ## Conventions
 

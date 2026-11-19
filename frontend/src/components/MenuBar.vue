@@ -11,6 +11,8 @@ const NAV_ITEMS = [
   { title: "Vehicle Types", name: "vehicle-types", roles: ["admin"] },
   { title: "Fleet", name: "fleet", roles: ["admin", "area_admin"] },
   { title: "Review", name: "review", roles: ["area_admin", "admin"] },
+  { title: "Calendar", name: "calendar", roles: ["admin", "area_admin"] },
+  { title: "Check availability", name: "availability" },
 ];
 
 const route = useRoute();

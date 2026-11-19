@@ -8,6 +8,8 @@ import areaRoutes from "./area.routes.js";
 import requestRoutes from "./request.routes.js";
 import reviewRoutes from "./review.routes.js";
 import destinationRoutes from "./destination.routes.js";
+import scheduleRoutes from "./schedule.routes.js";
+import assignmentRoutes from "./assignment.routes.js";
 
 const router = Router();
 
@@ -24,5 +26,7 @@ router.use("/areas", areaRoutes);
 router.use("/requests", requestRoutes);
 router.use("/api/review", reviewRoutes);
 router.use("/api/destinations", destinationRoutes);
+router.use("/", scheduleRoutes);
+router.use("/assignments", assignmentRoutes);
 
 export default router;

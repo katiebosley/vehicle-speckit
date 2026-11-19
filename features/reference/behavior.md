@@ -68,7 +68,7 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | `authenticate` sets `req.user = { id, role, email }`; `requireRole(...roles)` returns `403` | `authorization/authorization.js` | FR-007 |
 | `/users…` is admin-only (API `403`, route redirect to `home`) | `user.routes.js`, `router.js` `meta.roles` | FR-010, FR-011 |
 | Signed-out users are redirected to `login`; signed-in users are redirected away from `login` | `router.js` `authGuard` | FR-010 |
-| `MenuBar` on every route; Profile for all roles, Users and Vehicle Types for admin, Fleet and Review for admin and area admin, My Requests for requestor, nothing when signed out | `MenuBar.vue` | FR-009, Feature 3 FR-020, Feature 4 FR-018, Feature 5 FR-019 |
+| `MenuBar` on every route; Profile and Check availability for all roles, Users and Vehicle Types for admin, Fleet, Review, and Calendar for admin and area admin, My Requests for requestor, nothing when signed out | `MenuBar.vue` | FR-009, Feature 3 FR-020, Feature 4 FR-018, Feature 5 FR-019, Feature 6 FR-020 |
 
 ## User management — Feature 1
 
@@ -101,3 +101,17 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | Capacity and vehicle-count shortfalls warn in the dialog and still save | `ReviewQueue.vue` | FR-013 |
 | Assignments lock after departure. Completing requires the return time to have passed and one trip log per vehicle | `review.controller.js` | FR-014, FR-015 |
 | Active destinations are listed to any signed-in user. Creating or editing one requires an area admin or admin. Names are unique ignoring case | `destination.controller.js` | FR-018 |
+
+## Calendar, home, and trip logs — Feature 6
+
+| Rule | Enforcement | Provenance |
+|------|-------------|------------|
+| Home at `/` shows the role dashboard from `GET /vehicle-t2/dashboard`. The screen does not add rows the API omitted | `Home.vue` | FR-007, FR-011 |
+| A requestor sees their pending requests and upcoming trips (as requester or driver) with `departureAt` at or after now, soonest first. Empty copy is "No pending requests." and "No upcoming trips." | `schedule.controller.js`, `Home.vue` | FR-008 |
+| An area admin sees pending requests and maintenance vehicles only for `getManagedAreaIds`. Empty copy is "No pending requests for your areas." and "No vehicles in maintenance." | `schedule.controller.js`, `Home.vue` | FR-009 |
+| An admin sees every pending request, the pending count, the maintenance count, and a Calendar link. Empty pending copy is "No pending requests." | `schedule.controller.js`, `Home.vue` | FR-010 |
+| Calendar at `/calendar` is `admin` and `area_admin` only. A requestor who opens it goes home. An area admin who filters to an unmanaged area gets `403` "You do not manage this area." Other callers see no events outside their scope | `router.js`, `schedule.controller.js`, `Calendar.vue` | FR-002, FR-003, FR-004 |
+| Availability returns vehicles whose status is `available` and whose assignments do not overlap `[departureAt, returnAt)`. `returnAt` must be after `departureAt` | `schedule.controller.js`, `AvailabilityPanel.vue` | FR-005, FR-006 |
+| Check-out and check-in are the assignment driver or an admin. A different driver gets `403`. An area admin outside the assignment's area gets `404` "Assignment not found." One trip log per assignment. Check-in sets the vehicle's `currentMileage` to `endMileage` | `tripLog.controller.js` | FR-012, FR-013, FR-014, FR-015, FR-018 |
+| Trip history is newest first for an admin, or for an area admin when the vehicle is in a managed area. Otherwise `404` "Vehicle not found." | `tripLog.controller.js`, `Fleet.vue` | FR-016, FR-017 |
+| This feature does not create requests or assignments. The only vehicle write is `currentMileage` on check-in | `tripLog.controller.js` | FR-021 |

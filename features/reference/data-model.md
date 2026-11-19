@@ -1,6 +1,6 @@
 # Data Model Reference
 
-**Status:** Feature 1 (`users`, `sessions`), Feature 3 (`vehicle_types`, `areas`, `area_admins`, `vehicles`, `vehicle_unavailability`), Feature 4 (`requests`), and Feature 5 (`destinations`, `vehicle_assignments`, `trip_logs`, `requests.destination_id`).
+**Status:** Feature 1 (`users`, `sessions`), Feature 3 (`vehicle_types`, `areas`, `area_admins`, `vehicles`, `vehicle_unavailability`), Feature 4 (`requests`), Feature 5 (`destinations`, `vehicle_assignments`, `requests.destination_id`), and Feature 6 (`trip_logs` checkout fields, calendar and dashboard reads).
 
 Update this file when a feature that defines schema merges to `dev`.
 
@@ -117,20 +117,22 @@ Model: `backend/app/models/destination.model.js`. There is no delete.
 
 Unique index on (`request_id`, `vehicle_id`). Index on `vehicle_id`. Sequelize `timestamps: false`. No database overlap constraint. Model: `backend/app/models/vehicleAssignment.model.js`.
 
-### `trip_logs` — Feature 5
+### `trip_logs` — Feature 5 and Feature 6
 
 | Column | Type | Rules |
 |--------|------|-------|
 | `id` | INTEGER PK | Auto-increment |
-| `assignment_id` | INTEGER FK | Required; unique; references `vehicle_assignments.id` |
-| `start_mileage` | INTEGER | Required |
-| `end_mileage` | INTEGER | Required; greater than or equal to `start_mileage` |
-| `fuel_added_gallons` | DECIMAL(6,2) NULL | Optional; zero or greater |
-| `picked_up_at` | DATETIME | Required |
-| `returned_at` | DATETIME | Required; on or after `picked_up_at` |
-| `issues_reported` | TEXT NULL | Optional |
+| `assignment_id` | INTEGER FK | Required; unique; references `vehicle_assignments.id`. One log per assignment |
+| `start_mileage` | INTEGER | Required. Set on check-out, and still required when Feature 5 completes a request |
+| `end_mileage` | INTEGER NULL | Null until check-in. On check-in, greater than or equal to `start_mileage`. Feature 5 complete still requires it |
+| `fuel_added_gallons` | DECIMAL(8,2) NULL | Optional on check-in |
+| `picked_up_at` | DATETIME | Set on check-out |
+| `returned_at` | DATETIME NULL | Null until check-in |
+| `issues_reported` | TEXT NULL | Optional on check-in |
+| `created_at` | DATETIME | Sequelize timestamps |
+| `updated_at` | DATETIME | Sequelize timestamps |
 
-Sequelize `timestamps: false`. Model: `backend/app/models/tripLog.model.js`.
+Model: `backend/app/models/tripLog.model.js`. Feature 6 check-out inserts the row. Feature 6 check-in fills the return fields and sets `vehicles.current_mileage` to `end_mileage`. Feature 5 complete still inserts a finished log in one step.
 
 ## Associations
 

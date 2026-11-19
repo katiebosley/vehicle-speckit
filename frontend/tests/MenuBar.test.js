@@ -30,6 +30,8 @@ async function mountMenuBar(path = "/") {
       { path: "/vehicle-types", name: "vehicle-types", component: Blank },
       { path: "/fleet", name: "fleet", component: Blank },
       { path: "/review", name: "review", component: Blank },
+      { path: "/calendar", name: "calendar", component: Blank },
+      { path: "/availability", name: "availability", component: Blank },
       { path: "/my-requests", name: "my-requests", component: Blank },
     ],
   });
@@ -138,7 +140,7 @@ describe("Feature 1 — Sign-in, Roles & User Management", () => {
       signInAs("requestor");
       const { wrapper } = await mountMenuBar("/");
 
-      expect(labels(wrapper)).toEqual(["My Requests", "Profile", "Sign out"]);
+      expect(labels(wrapper)).toEqual(["My Requests", "Profile", "Check availability", "Sign out"]);
       expect(wrapper.find("[data-test='user-name']").text()).toBe("Jane Doe");
     });
 
@@ -153,7 +155,16 @@ describe("Feature 1 — Sign-in, Roles & User Management", () => {
       signInAs("admin");
       const { wrapper } = await mountMenuBar("/");
 
-      expect(labels(wrapper)).toEqual(["Users", "Profile", "Vehicle Types", "Fleet", "Review", "Sign out"]);
+      expect(labels(wrapper)).toEqual([
+        "Users",
+        "Profile",
+        "Vehicle Types",
+        "Fleet",
+        "Review",
+        "Calendar",
+        "Check availability",
+        "Sign out",
+      ]);
     });
   });
 
