@@ -68,7 +68,7 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | `authenticate` sets `req.user = { id, role, email }`; `requireRole(...roles)` returns `403` | `authorization/authorization.js` | FR-007 |
 | `/users…` is admin-only (API `403`, route redirect to `home`) | `user.routes.js`, `router.js` `meta.roles` | FR-010, FR-011 |
 | Signed-out users are redirected to `login`; signed-in users are redirected away from `login` | `router.js` `authGuard` | FR-010 |
-| `MenuBar` on every route; Profile for all roles, Users and Vehicle Types for admin, Fleet for admin and area admin, My Requests for requestor, nothing when signed out | `MenuBar.vue` | FR-009, Feature 3 FR-020, Feature 4 FR-018 |
+| `MenuBar` on every route; Profile for all roles, Users and Vehicle Types for admin, Fleet and Review for admin and area admin, My Requests for requestor, nothing when signed out | `MenuBar.vue` | FR-009, Feature 3 FR-020, Feature 4 FR-018, Feature 5 FR-019 |
 
 ## User management — Feature 1
 
@@ -89,3 +89,15 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | Users read/write only their own profile | `profile.controller.js` uses `req.user.id` | FR-015 |
 | Editable: first name, last name (required, ≤100), phone (optional, ≤20); other fields ignored | `profile.controller.js`, `Profile.vue` | FR-015 |
 | Saving updates the stored `user` name so `MenuBar` shows it | `Profile.vue` `user-changed` event | US-1.8 |
+
+## Review — Feature 5
+
+| Rule | Enforcement | Provenance |
+|------|-------------|------------|
+| Review is one screen at `/review` for `area_admin` and `admin`. Requestors do not see **Review**. Unsigned users go to login; requestors who open `/review` go home | `ReviewQueue.vue`, `MenuBar.vue`, `router.js` | FR-019, FR-020 |
+| An area admin sees and changes requests only in their areas. An admin sees every area. Out of area is `404`, not `403` | `review.controller.js` | FR-002 |
+| A vehicle is unavailable when it is missing, not `available`, blocked, or on an overlapping approved trip. Touching windows do not overlap. Pending, denied, cancelled, and completed trips do not block | `vehicleAvailability.js` | FR-006, FR-008 |
+| Every assignment write calls `checkVehicleAvailability` in the same transaction as the insert or update. The vehicle row is locked. There is no database overlap constraint | `review.controller.js` | FR-008, FR-009 |
+| Capacity and vehicle-count shortfalls warn in the dialog and still save | `ReviewQueue.vue` | FR-013 |
+| Assignments lock after departure. Completing requires the return time to have passed and one trip log per vehicle | `review.controller.js` | FR-014, FR-015 |
+| Active destinations are listed to any signed-in user. Creating or editing one requires an area admin or admin. Names are unique ignoring case | `destination.controller.js` | FR-018 |

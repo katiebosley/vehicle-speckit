@@ -1,6 +1,6 @@
 # API Reference
 
-**Status:** Feature 1 sign-in, users, and profile, Feature 3 fleet, and Feature 4 requests.
+**Status:** Feature 1 sign-in, users, and profile, Feature 3 fleet, Feature 4 requests, and Feature 5 review and destinations.
 
 API mount path is `/vehicle-t2` (see `backend/server.js`).
 
@@ -130,6 +130,53 @@ Detail `assignments` items are `{ id, vehicle: { id, name, licensePlate }, drive
 | `400` | `Only pending requests can be edited.` | Update when status is not `pending` |
 | `400` | `This request cannot be cancelled.` | Cancel is not allowed for that status and departure |
 | `404` | `Request not found.` | Unknown id, or the row belongs to someone else |
+
+### Review and destinations (Feature 5)
+
+Mounted at `/vehicle-t2/api/review` and `/vehicle-t2/api/destinations`. Review JSON uses snake_case. Feature 4 request JSON stays camelCase.
+
+Review routes require a session and role `area_admin` or `admin`. A requestor receives `403` `{ "message": "Area admin role required." }`. An unknown or out-of-area request receives `404` `{ "message": "Request with id=<id> not found." }`.
+
+| Method | Path | Success |
+|--------|------|---------|
+| `GET` | `/vehicle-t2/api/review/requests?status=` | `200` requests in scope. `status` defaults to `pending`. Ordered by `departure_at`. |
+| `GET` | `/vehicle-t2/api/review/requests/:requestId/available-vehicles` | `200` vehicles in the request's area that are free for that window. Matching vehicle type first. |
+| `GET` | `/vehicle-t2/api/review/requests/:requestId/eligible-drivers` | `200` active approved drivers whose license covers the return date. |
+| `POST` | `/vehicle-t2/api/review/requests/:requestId/approve` | `200` approved request with assignments. |
+| `POST` | `/vehicle-t2/api/review/requests/:requestId/deny` | `200` denied request. |
+| `POST` | `/vehicle-t2/api/review/requests/:requestId/assignments` | `200` request with the new assignment. |
+| `PUT` | `/vehicle-t2/api/review/requests/:requestId/assignments/:assignmentId` | `200` request with the updated assignment. |
+| `DELETE` | `/vehicle-t2/api/review/requests/:requestId/assignments/:assignmentId` | `200` request after the assignment is removed. |
+| `POST` | `/vehicle-t2/api/review/requests/:requestId/complete` | `200` completed request with a trip log on every assignment. |
+| `PUT` | `/vehicle-t2/api/review/trip-logs/:tripLogId` | `200` updated trip log. |
+| `GET` | `/vehicle-t2/api/destinations` | `200` active destinations by name. Any signed-in role. |
+| `POST` | `/vehicle-t2/api/destinations` | `201` destination. Area admin or admin. |
+| `PUT` | `/vehicle-t2/api/destinations/:destinationId` | `200` destination. Area admin or admin. |
+
+Approve body: `{ "review_notes": "optional", "assignments": [{ "vehicle_id": 3, "driver_id": 12 }] }`. Deny body: `{ "review_notes": "required" }`. Assignment body: `{ "vehicle_id": 3, "driver_id": 12 }`. Complete body: `{ "trip_logs": [{ "assignment_id", "start_mileage", "end_mileage", "picked_up_at", "returned_at", "fuel_added_gallons", "issues_reported" }] }`. Destination body: `{ "name", "is_active" }`. Client `status`, `reviewed_by`, `reviewed_at`, `assigned_by`, `assigned_at`, and `request_id` are ignored.
+
+| Status | Message | When |
+|--------|---------|------|
+| `400` | `Only pending requests can be reviewed.` | Approve or deny when status is not `pending` |
+| `400` | `At least one vehicle is required.` | Approve with no assignment |
+| `400` | `A note is required to deny a request.` | Deny with a blank note |
+| `400` | `Vehicle with id=<id> not found.` | Unknown vehicle |
+| `400` | `Vehicle with id=<id> does not belong to this request's area.` | Vehicle area differs from the request |
+| `409` | `Vehicle with id=<id> is not available for this trip.` | Maintenance, retired, blocked, or booked. Nothing from that call is saved |
+| `400` | `A vehicle can only be assigned once per request.` | Duplicate vehicle on one request |
+| `400` | `Driver with id=<id> is not an approved driver with a current license.` | Inactive, unapproved, or expired driver |
+| `400` | `A driver can only be assigned to one vehicle per request.` | Same driver on two vehicles |
+| `400` | `Assignments cannot change after the trip starts.` | Add, update, or delete when the request is not approved or departure has passed |
+| `400` | `An approved request must keep at least one vehicle.` | Delete of the last assignment |
+| `404` | `Assignment with id=<id> not found.` | Unknown assignment, or one on another request |
+| `400` | `Only approved requests whose trip has ended can be completed.` | Complete too early or not approved |
+| `400` | `A trip log is required for every assigned vehicle.` | Complete body does not match the assignments |
+| `400` | `End mileage must be greater than or equal to start mileage.` | End mileage is lower |
+| `400` | `Return time must be after pick-up time.` | `returned_at` is before `picked_up_at` |
+| `404` | `Trip log with id=<id> not found.` | Unknown trip log, or one outside the caller's areas |
+| `400` | `A destination named <name> already exists.` | Destination name matches ignoring case |
+| `404` | `Destination with id=<id> not found.` | Unknown destination |
+| `401` | Unauthorized message | No session |
 
 ## Conventions
 
