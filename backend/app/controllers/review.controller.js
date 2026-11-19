@@ -71,13 +71,24 @@ function presentTripLog(log) {
   };
 }
 
+function displayName(vehicle) {
+  const name = typeof vehicle?.name === "string" ? vehicle.name.trim() : "";
+  if (name) {
+    return name;
+  }
+  if (!vehicle) {
+    return null;
+  }
+  return `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+}
+
 function presentAssignment(assignment) {
   const vehicle = assignment.vehicle;
   return {
     id: assignment.id,
     request_id: assignment.requestId,
     vehicle_id: assignment.vehicleId,
-    vehicle_name: vehicle?.name || null,
+    vehicle_name: displayName(vehicle),
     license_plate: vehicle?.licensePlate || null,
     capacity: vehicle?.capacity ?? null,
     driver_id: assignment.driverId ?? null,
@@ -260,7 +271,7 @@ controller.availableVehicles = async (req, res) => {
     return res.send(
       available.map((vehicle) => ({
         id: vehicle.id,
-        name: vehicle.name,
+        name: displayName(vehicle),
         capacity: vehicle.capacity,
         license_plate: vehicle.licensePlate,
         vehicle_type_id: vehicle.vehicleTypeId,
