@@ -1,0 +1,13 @@
+import apiClient from "./services.js";
+
+export default {
+  getProfile() {
+    return apiClient.get("profile");
+  },
+  updateProfile(data) {
+    return apiClient.put("profile", data);
+  },
+  updateTestRole(data) {
+    return apiClient.put("profile/test-role", data);
+  },
+};

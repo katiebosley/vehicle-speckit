@@ -1,7 +1,23 @@
 {
   "name": "vehicle-speckit",
+  "version": "1.0.0",
   "private": true,
   "description": "Spec-driven app — monorepo root (deploy scripts orchestrate frontend/ and backend/)",
+  "homepage": "https://github.com/katiebosley/vehicle-speckit#readme",
+  "bugs": {
+    "url": "https://github.com/katiebosley/vehicle-speckit/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/katiebosley/vehicle-speckit.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
   "scripts": {
     "build:frontend": "npm run build --prefix frontend",
     "bundle:frontend": "npm run bundle --prefix frontend",

@@ -4,18 +4,21 @@ globs: "backend/app/**/*"
 ---
 # Security & Access Control
 
-## Authentication Flow
-1.  `POST /login` — validate `username` + `password`; normalize username: `trim().toLowerCase()`.
-2.  Look up user; compare password with `bcrypt.compare()` against hash from `User.unscoped()`.
-3.  Reuse valid Session row if token not expired; otherwise create new JWT + Session row.
-4.  Return user payload including `token`, `userId`, `role` (never return password hash).
-5.  `POST /logout` — clear token on Session row.
-6.  `AUTH_SECRET` from environment; no hardcoded secrets in production.
+## Authentication Flow (Google sign-in — ADR-0002)
+1.  `POST /login` receives `{ credential }` (Google ID token). There are no passwords and no register endpoint.
+2.  Verify with `google-auth-library` `OAuth2Client.verifyIdToken({ idToken, audience: GOOGLE_CLIENT_ID })`. Missing/invalid token or unset `GOOGLE_CLIENT_ID` → `401` `Google sign-in failed.`
+3.  Allow only emails in `authConfig.allowedEmailDomains` (`oc.edu`, `eagles.oc.edu`) → else `403`; never create a user for a rejected domain.
+4.  Find user by `googleId`, then by lowercase email (link seeded users); else create a `requestor`. Never change an existing role at sign-in.
+5.  Inactive user → `403`, no session. Reuse a valid Session row (non-empty token, not expired); otherwise create new JWT + Session row (24 hours).
+6.  Return user payload including `token`, `userId`, `role` (never return `googleId`).
+7.  `POST /logout` — clear token on Session row.
+8.  `AUTH_SECRET` and `GOOGLE_CLIENT_ID` from environment; the Google client secret is not used.
+9.  Tests never call Google: `jest.spyOn(OAuth2Client.prototype, "verifyIdToken")` (see `backend/tests/helpers.js`).
 
 ## Request Authentication
 *   `authenticate` middleware reads `Authorization: Bearer <token>`.
-*   Validates token exists in Session table and `expirationDate >= Date.now()`.
-*   Sets `req.user = { id, role, organizationId }` from joined User row.
+*   Validates token exists in Session table, `expirationDate >= Date.now()`, and the user is active.
+*   Sets `req.user = { id, role, email }` from joined User row.
 *   Missing/invalid → `401` with `{ message: "Unauthorized! ..." }`.
 
 ## User-Scoped Data (Todo App)
@@ -34,14 +37,11 @@ export const getAccessibleListOrNull = async (req, listId) => {
 Controllers call helpers; do not duplicate scope logic inline.
 
 ## Role Guards
-Export named middleware from `authorization/authorization.js`:
-*   `requireAdmin` — role is `admin` or `superadmin`.
-*   `requireSuperAdmin` — role is `superadmin` only.
-
-## Password Rules
-*   Hash with bcryptjs, `SALT_ROUNDS = 10`.
-*   Minimum length enforced at controller (e.g. 8 chars on reset).
-*   `reset-password` disabled when `NODE_ENV === "production"`.
+Export `requireRole(...roles)` from `authorization/authorization.js`. Use it after `authenticate`:
+```javascript
+router.use(authenticate, requireRole("admin"));
+```
+Wrong role → `403` with `{ message: "You do not have permission for this action." }`. Roles: `admin`, `area_admin`, `requestor`.
 
 ## Optional Multi-Org Scoping (future)
 If org tenancy is added, centralize filters in `authorization/tenantScope.js`:

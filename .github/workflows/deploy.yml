@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
 
 jobs:
   test:
@@ -24,6 +24,8 @@ jobs:
           node-version: 24
 
       - name: Install and build
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         run: |
           npm install
           npm run build
@@ -49,6 +51,7 @@ jobs:
       DB_USER: ${{ secrets.DB_USER }}
       DB_NAME: ${{ secrets.DB_NAME }}
       AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       PORT: ${{ secrets.PORT }}
       NODE_ENV: production
       SEQUELIZE_SYNC_ALTER: ${{ secrets.SEQUELIZE_SYNC_ALTER }}
@@ -75,6 +78,7 @@ jobs:
           echo DB_USER="$DB_USER" >> .env
           echo DB_NAME="$DB_NAME" >> .env
           echo AUTH_SECRET="$AUTH_SECRET" >> .env
+          echo GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" >> .env
           echo PORT="$PORT" >> .env
           echo NODE_ENV="$NODE_ENV" >> .env
           echo SEQUELIZE_SYNC_ALTER="$SEQUELIZE_SYNC_ALTER" >> .env

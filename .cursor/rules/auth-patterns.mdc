@@ -8,30 +8,26 @@ globs: "frontend/src/**/*, backend/app/controllers/auth.*, backend/app/models/se
 *   Fields: `token`, `email`, `expirationDate`, `userId` (FK to users).
 *   Token stored server-side; client sends it as Bearer header on each request.
 *   Session TTL: 24 hours (`expiresIn: 86400` on JWT; matching `expirationDate` on row).
-*   On login, reuse non-expired session for same email before issuing a new token.
+*   On login, reuse non-expired session for the same user before issuing a new token.
 
 ## Login Response Payload
 Return flat JSON (not wrapped):
 ```json
 {
   "userId": 1,
-  "username": "jdoe",
-  "email": "jdoe@example.com",
-  "fName": "Jane",
-  "lName": "Doe",
-  "role": "worker",
+  "email": "jdoe@oc.edu",
+  "firstName": "Jane",
+  "lastName": "Doe",
+  "role": "requestor",
+  "isApprovedDriver": false,
   "token": "<jwt>"
 }
 ```
 
 ## Frontend Auth State
-*   Store full login response in `localStorage` key `user` via `Utils.setStore("user", res.data)`.
+*   `Login.vue` renders the Google Identity Services button (`VITE_GOOGLE_CLIENT_ID`) and sends its `credential` to `authServices.loginUser`.
+*   Store full login response in `localStorage` key `user` via `Utils.setStore("user", res.data)`, then dispatch `user-changed`.
 *   `authServices.js`: `loginUser`, `logoutUser` methods calling `apiClient.post` (see `frontend-services.mdc`).
-*   Logout clears server session, then `Utils.removeItem("user")`, then route to login.
-*   `router.beforeEach`: if no `user` in store and route is not login → redirect to login.
+*   Logout clears server session, calls `google.accounts.id.disableAutoSelect()`, then `Utils.removeItem("user")`, then routes to login.
+*   `router.js` `authGuard`: no session → login; signed in on login → home; `meta.roles` not matched → home.
 *   Axios token attachment and 401 redirect: `frontend-services.mdc`.
-
-## Registration (when spec requires)
-*   Hash password server-side before `User.create`.
-*   Validate required fields in controller; return `400` with `{ message }`.
-*   Mirror the same field rules in the Vue form with Vuetify validation rules.

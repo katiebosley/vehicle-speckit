@@ -16,7 +16,12 @@ No application code may be written unless it maps to a requirement in one of the
 
 | ID | File | Branch | Depends on |
 |----|------|--------|------------|
-| — | *Add `feature-1-….md` before implementation* | `feature/1-…` | — |
+| 1 | [feature-1-google-auth-user-management.md](./feature-1-google-auth-user-management.md) | `feature/1-google-auth-user-management` | — |
+| 2 | [feature-2-areas-area-admins-deploy.md](./feature-2-areas-area-admins-deploy.md) | `feature/2-areas-area-admins-deploy` | Feature 1 |
+| 3 | [feature-3-fleet-management.md](./feature-3-fleet-management.md) (Draft; types contract usable by F4) | `feature/3-fleet-management` | Feature 1 (+ 2 as needed) |
+| 4 | [feature-4-making-and-tracking-requests.md](./feature-4-making-and-tracking-requests.md) (**Ready**) | `feature/4-making-and-tracking-requests` | Features 1–3 |
+| 5 | [feature-5-vehicle-management.md](./feature-5-vehicle-management.md) | `feature-5-vehicle-management` | Features 1–4 |
+| 6 | [feature-6-schedule-calendar-trip-logs-dashboard.md](./feature-6-schedule-calendar-trip-logs-dashboard.md) | `feature/6-schedule-calendar-trip-logs-dashboard` | Features 1–5 |
 
 New features: follow [framework.md](./framework.md#feature-spec-template) — **Status**, **Input**, **FR-00N**, **SC-00N**, **Key Entities**, Gherkin, **Agent implementation request**, **Definition of Done**.
 
