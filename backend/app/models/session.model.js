@@ -20,5 +20,8 @@ export default (sequelize, Sequelize) =>
         allowNull: false,
       },
     },
-    { underscored: true }
+    {
+      tableName: "sessions",
+      underscored: true,
+    }
   );

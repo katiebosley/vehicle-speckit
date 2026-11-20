@@ -2,6 +2,42 @@
 
 **Living snapshot** of product rules currently in force on `dev`.
 
+## Vehicle types (Feature 3, US-3.1 and US-3.2)
+
+| Rule | Enforcement |
+|------|-------------|
+| Any signed-in user may list types. Admins see inactive types. Requestors and area admins see active types only, ordered by name. | `GET /vehicle-t2/vehicle-types` |
+| Only an admin may create or edit a type. | `403` `{ "message": "You do not have permission for this action." }` |
+| A blank name is rejected. A name that matches another type ignoring case is rejected. | `400` with the messages in Feature 3 FR-005 |
+| A type stays active when a vehicle of that type is not `retired`. | `400` `{ "message": "This vehicle type is still used by a vehicle that is not retired." }` |
+| No session | `401` `{ "message": "Unauthorized! …" }` |
+
+## Fleet (Feature 3, US-3.3 through US-3.7)
+
+| Rule | Enforcement |
+|------|-------------|
+| Area admins create and edit vehicles only in areas from `getManagedAreaIds`. An admin may use any active area. | `403` `{ "message": "You do not manage this area." }` |
+| A vehicle outside the caller's areas, including one id, is hidden. | `404` `{ "message": "Vehicle not found." }` |
+| Requestors cannot call vehicle routes, and **Fleet** is not in their menu. `/fleet` sends them home. | `403` `{ "message": "You do not have permission for this action." }` |
+| Retiring a vehicle that has a future approved trip is refused. Before `vehicle_assignments` exists, retire succeeds. | `409` `{ "message": "This vehicle is assigned to a future trip." }` |
+| Blocks cannot overlap each other or an approved trip. Touching windows are allowed. | `400` / `409` messages in Feature 3 FR-017 and FR-018 |
+| `npm run seed --prefix backend` adds Car, Truck, Van, and Golf Cart, plus sample vehicles, without overwriting existing rows. | `backend/scripts/seed.mjs` |
+
+## Requests (Feature 4)
+
+| Rule | Enforcement |
+|------|-------------|
+| Only a `requestor` may create, list, view, edit, or cancel requests. | `401` without a session; `403` `{ "message": "You do not have permission for this action." }` for other roles |
+| `requesterId` is the signed-in user. The client cannot set it, and cannot set review fields or status on create. | `request.controller.js` |
+| List and detail return only that user’s rows. Another user’s id is `404` `{ "message": "Request not found." }`. | `getOwnedRequestOrNull` |
+| List order is `createdAt` descending. | `listOwnedRequests` |
+| Create and update reject a blank required field, a return that is not after departure, a departure that is not in the future, a passenger count or vehicles-needed value below 1, and an inactive or unknown area or vehicle type. | `400` with the messages in Feature 4 FR-005 through FR-009 |
+| `vehiclesNeeded` defaults to `1` when omitted. | `request.controller.js` |
+| Edit is allowed only while `status` is `pending`, and it does not change review fields or `requesterId`. | `400` `{ "message": "Only pending requests can be edited." }` |
+| Cancel is allowed for `pending`, and for `approved` when `departureAt` is still in the future. Other cases stay unchanged. | `400` `{ "message": "This request cannot be cancelled." }` |
+| Detail includes review notes and assignment summaries when those values exist. Assignment rows are not written here. | `GET /vehicle-t2/requests/:id` |
+| **My Requests** is in the menu for `requestor` only, at `/my-requests`. | `MenuBar.vue`, `router.js` |
+
 These files answer: *"What rules does the app enforce right now?"*  
 They do **not** authorize new scope — implement only from `features/feature-*.md`.
 
@@ -32,7 +68,7 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | `authenticate` sets `req.user = { id, role, email }`; `requireRole(...roles)` returns `403` | `authorization/authorization.js` | FR-007 |
 | `/users…` is admin-only (API `403`, route redirect to `home`) | `user.routes.js`, `router.js` `meta.roles` | FR-010, FR-011 |
 | Signed-out users are redirected to `login`; signed-in users are redirected away from `login` | `router.js` `authGuard` | FR-010 |
-| `MenuBar` on every route; Profile for all roles, Users for admin, nothing when signed out | `MenuBar.vue` | FR-009 |
+| `MenuBar` on every route; Profile for all roles, Users and Vehicle Types for admin, Fleet and Review for admin and area admin, My Requests for requestor, nothing when signed out | `MenuBar.vue` | FR-009, Feature 3 FR-020, Feature 4 FR-018, Feature 5 FR-019 |
 
 ## User management — Feature 1
 
@@ -53,3 +89,15 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | Users read/write only their own profile | `profile.controller.js` uses `req.user.id` | FR-015 |
 | Editable: first name, last name (required, ≤100), phone (optional, ≤20); other fields ignored | `profile.controller.js`, `Profile.vue` | FR-015 |
 | Saving updates the stored `user` name so `MenuBar` shows it | `Profile.vue` `user-changed` event | US-1.8 |
+
+## Review — Feature 5
+
+| Rule | Enforcement | Provenance |
+|------|-------------|------------|
+| Review is one screen at `/review` for `area_admin` and `admin`. Requestors do not see **Review**. Unsigned users go to login; requestors who open `/review` go home | `ReviewQueue.vue`, `MenuBar.vue`, `router.js` | FR-019, FR-020 |
+| An area admin sees and changes requests only in their areas. An admin sees every area. Out of area is `404`, not `403` | `review.controller.js` | FR-002 |
+| A vehicle is unavailable when it is missing, not `available`, blocked, or on an overlapping approved trip. Touching windows do not overlap. Pending, denied, cancelled, and completed trips do not block | `vehicleAvailability.js` | FR-006, FR-008 |
+| Every assignment write calls `checkVehicleAvailability` in the same transaction as the insert or update. The vehicle row is locked. There is no database overlap constraint | `review.controller.js` | FR-008, FR-009 |
+| Capacity and vehicle-count shortfalls warn in the dialog and still save | `ReviewQueue.vue` | FR-013 |
+| Assignments lock after departure. Completing requires the return time to have passed and one trip log per vehicle | `review.controller.js` | FR-014, FR-015 |
+| Active destinations are listed to any signed-in user. Creating or editing one requires an area admin or admin. Names are unique ignoring case | `destination.controller.js` | FR-018 |
